@@ -6,7 +6,7 @@ import { ChatSheet } from '../components/ChatSheet';
 import { errMsg, usePolling } from '../lib/util';
 import { Avatar } from '../ui/Avatar';
 import { Header } from '../ui/Header';
-import { C, S, T } from '../ui/theme';
+import { C, RADIUS, S, T, popColor } from '../ui/theme';
 import type { ScreenProps } from '../Main';
 
 export function TalkScreen(p: ScreenProps) {
@@ -75,14 +75,14 @@ export function TalkScreen(p: ScreenProps) {
               const people = [event.host, ...event.members];
               const date = last ? new Date(last.created_at) : null;
               return (
-                <Pressable key={event.id} accessibilityRole="button" accessibilityLabel={`${event.title}のトークを開く`} onPress={() => setEventId(event.id)} style={({ pressed }) => [styles.row, pressed && { backgroundColor: C.surface }]}>
+                <Pressable key={event.id} accessibilityRole="button" accessibilityLabel={`${event.title}のトークを開く`} onPress={() => setEventId(event.id)} style={({ pressed }) => [styles.row, { backgroundColor: talk.active ? popColor(event.title) : C.surface, transform: [{ scale: pressed ? 0.985 : 1 }] }]}>
                   <View style={styles.rowTop}>
-                    <Text numberOfLines={1} style={[T.h2, styles.grow]}>{event.title}</Text>
-                    {date ? <Text style={T.small}>{date.toLocaleDateString('ja-JP', { month: 'numeric', day: 'numeric' })} {date.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' })}</Text> : null}
+                    <Text numberOfLines={1} style={[T.h1, styles.grow, { fontSize: 22 }, talk.active && { color: C.white }]}>{event.title}</Text>
+                    {date ? <Text style={[T.small, talk.active && { color: 'rgba(255,255,255,0.85)' }]}>{date.toLocaleDateString('ja-JP', { month: 'numeric', day: 'numeric' })} {date.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' })}</Text> : null}
                   </View>
-                  <Text numberOfLines={1} style={T.sub}>{last?.body ?? 'まだメッセージはありません'}</Text>
+                  <Text numberOfLines={1} style={[T.body, { fontWeight: '600' }, talk.active ? { color: C.white } : { color: C.muted }]}>{last?.body ?? 'まだメッセージはありません'}</Text>
                   <View style={styles.avatars}>
-                    {people.slice(0, 5).map(user => <Avatar key={user.id} user={user} size={26} />)}
+                    {people.slice(0, 5).map((user, i) => <View key={user.id} style={{ marginLeft: i ? -8 : 0 }}><Avatar user={user} size={28} border={talk.active ? popColor(event.title) : C.surface} /></View>)}
                     {people.length > 5 ? <Text style={T.small}>+{people.length - 5}</Text> : null}
                   </View>
                 </Pressable>
@@ -102,10 +102,10 @@ export function TalkScreen(p: ScreenProps) {
 const styles = StyleSheet.create({
   content: { paddingHorizontal: 16, paddingBottom: 32 },
   notice: { gap: 12, marginBottom: 20 },
-  empty: { backgroundColor: C.surface, padding: 20, gap: 16, marginBottom: 24 },
-  sectionHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderBottomWidth: 2, borderBottomColor: C.ink, paddingVertical: 12, marginTop: 8 },
+  empty: { backgroundColor: C.surface, borderRadius: RADIUS, padding: 20, gap: 16, marginBottom: 24 },
+  sectionHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingTop: 16, paddingBottom: 10 },
   sectionEmpty: { paddingVertical: 20 },
-  row: { paddingVertical: 18, borderBottomWidth: 1, borderBottomColor: C.line, gap: 10 },
+  row: { borderRadius: RADIUS, padding: 18, marginBottom: 12, gap: 8 },
   rowTop: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   grow: { flex: 1 },
   avatars: { flexDirection: 'row', alignItems: 'center', gap: 4 },

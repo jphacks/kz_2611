@@ -24,11 +24,11 @@ export interface ScreenProps {
 }
 
 const ICON: Record<Tab, (c: string) => React.ReactNode> = {
-  board: c => <Path d="M4 11 L12 4 L20 11 V20 H4 Z" stroke={c} strokeWidth={1.8} fill="none" />,
-  create: c => <Path d="M12 4 V20 M4 12 H20" stroke={c} strokeWidth={1.8} />,
-  talk: c => <Path d="M4 5 H20 V16 H9 L5 20 V16 H4 Z" stroke={c} strokeWidth={1.8} fill="none" />,
-  follow: c => <><Circle cx={9} cy={8} r={3.2} stroke={c} strokeWidth={1.8} fill="none" /><Circle cx={17} cy={9} r={2.4} stroke={c} strokeWidth={1.8} fill="none" /><Path d="M3 19 C3 14 15 14 15 19 M15 14 C19 14 21 16 21 19" stroke={c} strokeWidth={1.8} fill="none" /></>,
-  profile: c => <><Circle cx={12} cy={8} r={3.6} stroke={c} strokeWidth={1.8} fill="none" /><Path d="M5 20 C5 14 19 14 19 20" stroke={c} strokeWidth={1.8} fill="none" /></>,
+  board: c => <Path d="M4 11 L12 4 L20 11 V20 H4 Z" stroke={c} strokeWidth={2} fill="none" />,
+  create: c => <Path d="M12 5 V19 M5 12 H19" stroke={c} strokeWidth={2.6} strokeLinecap="round" />,
+  talk: c => <Path d="M4 5 H20 V16 H9 L5 20 V16 H4 Z" stroke={c} strokeWidth={2} fill="none" />,
+  follow: c => <><Circle cx={9} cy={8} r={3.2} stroke={c} strokeWidth={2} fill="none" /><Circle cx={17} cy={9} r={2.4} stroke={c} strokeWidth={2} fill="none" /><Path d="M3 19 C3 14 15 14 15 19 M15 14 C19 14 21 16 21 19" stroke={c} strokeWidth={2} fill="none" /></>,
+  profile: c => <><Circle cx={12} cy={8} r={3.6} stroke={c} strokeWidth={2} fill="none" /><Path d="M5 20 C5 14 19 14 19 20" stroke={c} strokeWidth={2} fill="none" /></>,
 };
 const LABEL: Record<Tab, string> = { board: '掲示板', create: '誘う', talk: 'トーク', follow: 'フォロー', profile: 'プロフィール' };
 
@@ -42,7 +42,7 @@ export function Main() {
     setReady(true);
   })(); }, []);
   if (!ready) return <View style={{ flex: 1, backgroundColor: C.bg }} />;
-  if (!me) return <SafeAreaView style={{ flex: 1, backgroundColor: C.bg }}><AuthScreen onDone={setMe} /></SafeAreaView>;
+  if (!me) return <View style={{ flex: 1, backgroundColor: '#E9E9E9', alignItems: 'center' }}><SafeAreaView style={{ flex: 1, width: '100%', maxWidth: 480, backgroundColor: C.bg }}><AuthScreen onDone={setMe} /></SafeAreaView></View>;
   const props: ScreenProps = {
     me, setMe, ...nav,
     go: (t, o) => { setNav(o || {}); setTab(t); },
@@ -51,19 +51,30 @@ export function Main() {
   };
   const Screen = { board: BoardScreen, create: CreateScreen, talk: TalkScreen, follow: FollowScreen, profile: ProfileScreen }[tab];
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: C.bg }} edges={['top', 'bottom']}>
-      <View style={{ flex: 1 }}><Screen {...props} /></View>
-      <View style={{ flexDirection: 'row', borderTopWidth: 2, borderTopColor: C.ink, backgroundColor: C.bg, paddingTop: 8, paddingBottom: 6 }}>
-        {(Object.keys(LABEL) as Tab[]).map(t => {
-          const c = t === tab ? C.ink : C.muted;
-          return (
-            <Pressable key={t} onPress={() => props.go(t)} style={{ flex: 1, alignItems: 'center', gap: 2 }} accessibilityRole="tab" accessibilityState={{ selected: t === tab }}>
-              <Svg width={22} height={22} viewBox="0 0 24 24">{ICON[t](c)}</Svg>
-              <Text style={{ fontFamily: FONT, fontSize: 10, fontWeight: t === tab ? '800' : '600', color: c }}>{LABEL[t]}</Text>
-            </Pressable>
-          );
-        })}
-      </View>
-    </SafeAreaView>
+    <View style={{ flex: 1, backgroundColor: '#E9E9E9', alignItems: 'center' }}>
+      {/* スマホ前提。PC では画面中央にスマホ幅で表示する */}
+      <SafeAreaView style={{ flex: 1, width: '100%', maxWidth: 480, backgroundColor: C.bg }} edges={['top', 'bottom']}>
+        <View style={{ flex: 1 }}><Screen {...props} /></View>
+        <View style={{ flexDirection: 'row', borderTopWidth: 1, borderTopColor: C.line, backgroundColor: C.bg, paddingTop: 6, paddingBottom: 4 }}>
+          {(Object.keys(LABEL) as Tab[]).map(t => {
+            const on = t === tab;
+            const c = on ? C.ink : '#9A9A9A';
+            if (t === 'create') return (
+              <Pressable key={t} onPress={() => props.go(t)} style={{ flex: 1, alignItems: 'center', justifyContent: 'center', minHeight: 52 }} accessibilityRole="tab" accessibilityLabel="誘う" accessibilityState={{ selected: on }}>
+                <View style={{ width: 52, height: 40, borderRadius: 20, backgroundColor: C.red, alignItems: 'center', justifyContent: 'center' }}>
+                  <Svg width={22} height={22} viewBox="0 0 24 24">{ICON.create(C.white)}</Svg>
+                </View>
+              </Pressable>
+            );
+            return (
+              <Pressable key={t} onPress={() => props.go(t)} style={{ flex: 1, alignItems: 'center', justifyContent: 'center', gap: 2, minHeight: 52 }} accessibilityRole="tab" accessibilityState={{ selected: on }}>
+                <Svg width={24} height={24} viewBox="0 0 24 24">{ICON[t](c)}</Svg>
+                <Text style={{ fontFamily: FONT, fontSize: 10, fontWeight: on ? '800' : '600', color: c }}>{LABEL[t]}</Text>
+              </Pressable>
+            );
+          })}
+        </View>
+      </SafeAreaView>
+    </View>
   );
 }
