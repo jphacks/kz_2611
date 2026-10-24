@@ -9,8 +9,8 @@
 | docs/spec.md | 仕様書（正） |
 | docs/mock-decisions.md | 仕様で「不明」の点を、モックのために仮に決めたもの |
 | docs/api.md | API の契約 |
-| docs/design/style12-swiss.png | デザインの見本（Swiss）。全画面これに揃える |
-| docs/design/sketch-styles-12.pdf | デザイン候補12案（採用は12番 Swiss） |
+| docs/design/style11-colorpop.png | デザインの見本（Color Pop）。全画面これに揃える |
+| docs/design/sketch-styles-12.pdf | デザイン候補12案（採用は STYLE 11 Color Pop） |
 | docs/design/ui-image/ | 手書き図と音声から作ったUIイメージ |
 | docs/sources/ | 元資料: アイデアマップ、UI設計図、手書きUI図、説明音声の文字起こし |
 

@@ -129,7 +129,7 @@ export function FollowScreen({ me }: ScreenProps) {
 const styles = StyleSheet.create({
   content: { paddingHorizontal: 16, paddingTop: 8, paddingBottom: 32, gap: 16 },
   heading: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
-  panel: { padding: 16, backgroundColor: C.surface, gap: 12, borderTopWidth: 2, borderColor: C.ink },
+  panel: { padding: 18, backgroundColor: C.white, borderRadius: 22, borderWidth: 1.5, borderColor: C.line, gap: 12 },
   row: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: C.line },
   grow: { flex: 1 }, delete: { padding: 12 },
   members: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 }, member: { alignItems: 'center', gap: 4 },

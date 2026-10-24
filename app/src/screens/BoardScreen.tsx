@@ -100,7 +100,7 @@ export function BoardScreen(p: ScreenProps) {
           </View>}
           {loading ? <View style={{ padding: 40 }}><ActivityIndicator color={C.ink} accessibilityLabel="募集を読み込み中" /></View> : visible.length ? visible.map(event =>
             <EventCard key={event.id} event={event} now={now} joining={joining === event.id} onOpen={() => setChatId(event.id)} onJoin={() => { void join(event); }} onPressMembers={() => setMembers(event)} />
-          ) : !error && <View style={{ backgroundColor: C.surface, padding: 24, gap: 16 }}>
+          ) : !error && <View style={{ backgroundColor: C.surface, borderRadius: 22, padding: 24, gap: 16 }}>
             <Text style={T.h1}>募集中の遊びは{'\n'}まだありません</Text>
             <Text style={T.sub}>{friendCount === 0 ? 'まずは友達を追加して、一緒に遊ぶ仲間を見つけましょう。' : group === 'all' ? '最初のひと声を、あなたから。友達を誘ってみましょう。' : 'このグループで、最初の募集をしてみましょう。'}</Text>
             <Pressable accessibilityRole="button" style={S.btn} onPress={() => p.go(friendCount === 0 ? 'follow' : 'create')}><Text style={S.btnText}>{friendCount === 0 ? '友達を追加する' : '遊びに誘う'}</Text></Pressable>

@@ -5,7 +5,7 @@ import { api, type EventItem, type Me, type Message } from '../api';
 import { errMsg, usePolling } from '../lib/util';
 import { Avatar } from '../ui/Avatar';
 import { Sheet } from '../ui/Sheet';
-import { C, S, T } from '../ui/theme';
+import { C, S, T, tint } from '../ui/theme';
 import { ParticipantsSheet } from './ParticipantsSheet';
 import { canJoin, mergeMessages } from './chat/messages';
 
@@ -88,7 +88,7 @@ function ChatSession({ eventId, me, onClose, onChanged, onEdit }: Omit<ChatSheet
           </Pressable>}
           <Text numberOfLines={1} style={[T.h2, { flex: 1 }]}>{event?.title ?? 'トーク'}</Text>
           {member && <Pressable accessibilityRole="button" accessibilityLabel="イベントのメニュー" onPress={() => { setMenu(!menu); setConfirmDelete(false); }} style={{ padding: 10 }}><Text style={T.h2}>⋯</Text></Pressable>}
-          <Pressable accessibilityRole="button" accessibilityLabel="チャットを閉じる" onPress={onClose} style={{ padding: 10 }}><Text style={[T.h2, { color: C.muted }]}>×</Text></Pressable>
+          <Pressable accessibilityRole="button" accessibilityLabel="チャットを閉じる" onPress={onClose} style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: C.surface, alignItems: 'center', justifyContent: 'center' }}><Text style={[T.h2, { color: C.muted, fontSize: 16 }]}>×</Text></Pressable>
         </View>
         {menu && event && <View style={{ padding: 16, gap: 10, borderBottomWidth: 1, borderColor: C.line }}>
           {event.is_host ? <>
@@ -104,17 +104,17 @@ function ChatSession({ eventId, me, onClose, onChanged, onEdit }: Omit<ChatSheet
             onScroll={e => { const { contentOffset, contentSize, layoutMeasurement } = e.nativeEvent; nearBottom.current = contentSize.height - contentOffset.y - layoutMeasurement.height < 80; }} scrollEventThrottle={100}
             onContentSizeChange={() => { if (nearBottom.current) scroll.current?.scrollToEnd({ animated: false }); }}>
             {messages.length === 0 && <Text style={[T.sub, { textAlign: 'center', paddingTop: 20 }]}>まだメッセージはありません</Text>}
-            {messages.map(m => m.kind === 'system' ? <Text key={m.id} style={[T.small, { alignSelf: 'center', textAlign: 'center', backgroundColor: C.surface, paddingHorizontal: 10, paddingVertical: 5 }]}>{m.body}</Text> : <View key={m.id} style={{ flexDirection: 'row', gap: 8, alignSelf: m.user?.id === me.id ? 'flex-end' : 'flex-start', maxWidth: '88%', alignItems: 'flex-end' }}>
+            {messages.map(m => m.kind === 'system' ? <Text key={m.id} style={[T.small, { alignSelf: 'center', textAlign: 'center', backgroundColor: C.surface, borderRadius: 999, overflow: 'hidden', paddingHorizontal: 12, paddingVertical: 5 }]}>{m.body}</Text> : <View key={m.id} style={{ flexDirection: 'row', gap: 8, alignSelf: m.user?.id === me.id ? 'flex-end' : 'flex-start', maxWidth: '88%', alignItems: 'flex-end' }}>
               {m.user && m.user.id !== me.id && <Avatar user={m.user} size={26} />}
               <View style={{ flexShrink: 1, gap: 4 }}>
                 {m.user?.id !== me.id && <Text style={T.small}>{m.user?.name ?? '参加者'}</Text>}
-                <View style={{ backgroundColor: m.user?.id === me.id ? C.ink : C.surface, paddingHorizontal: 12, paddingVertical: 10 }}><Text style={[T.body, { color: m.user?.id === me.id ? C.white : C.ink }]}>{m.body}</Text></View>
+                <View style={{ backgroundColor: m.user?.id === me.id ? C.blue : tint(m.user?.id ?? 0), borderRadius: 20, borderBottomRightRadius: m.user?.id === me.id ? 6 : 20, borderBottomLeftRadius: m.user?.id === me.id ? 20 : 6, paddingHorizontal: 14, paddingVertical: 10 }}><Text style={[T.body, { color: m.user?.id === me.id ? C.white : C.ink, fontWeight: '600' }]}>{m.body}</Text></View>
               </View>
             </View>)}
           </ScrollView>
           <View style={{ flexDirection: 'row', alignItems: 'flex-end', padding: 14, gap: 8 }}>
-            <TextInput accessibilityLabel="メッセージ" placeholder="メッセージ" placeholderTextColor={C.muted} multiline maxLength={500} value={body} onChangeText={setBody} editable={!busy} style={[S.input, { flex: 1, minHeight: 44, maxHeight: 120 }]} />
-            <Pressable accessibilityRole="button" accessibilityLabel="送信" accessibilityState={{ disabled: busy || !body.trim() }} disabled={busy || !body.trim()} onPress={() => void action('send')} style={{ backgroundColor: C.red, width: 44, height: 44, alignItems: 'center', justifyContent: 'center', opacity: busy || !body.trim() ? 0.5 : 1 }}>
+            <TextInput accessibilityLabel="メッセージ" placeholder="メッセージ" placeholderTextColor={C.muted} multiline maxLength={500} value={body} onChangeText={setBody} editable={!busy} style={[S.input, { flex: 1, maxHeight: 120, borderRadius: 24 }]} />
+            <Pressable accessibilityRole="button" accessibilityLabel="送信" accessibilityState={{ disabled: busy || !body.trim() }} disabled={busy || !body.trim()} onPress={() => void action('send')} style={{ backgroundColor: C.red, width: 48, height: 48, borderRadius: 24, alignItems: 'center', justifyContent: 'center', opacity: busy || !body.trim() ? 0.5 : 1 }}>
               <Svg width={22} height={22} viewBox="0 0 24 24"><Path d="M4 11 L20 4 L14 20 L11 13 Z M11 13 L20 4" stroke={C.white} strokeWidth={1.5} fill="none" /></Svg>
             </Pressable>
           </View>

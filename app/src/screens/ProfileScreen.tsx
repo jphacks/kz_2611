@@ -106,7 +106,7 @@ export function ProfileScreen(props: ScreenProps) {
 
 const styles = StyleSheet.create({
   content: { paddingHorizontal: 16, paddingBottom: 32, gap: 16, width: '100%', maxWidth: 640, alignSelf: 'center' },
-  identity: { flexDirection: 'row', alignItems: 'center', gap: 24, paddingVertical: 16, borderTopWidth: 3, borderTopColor: C.ink },
+  identity: { flexDirection: 'row', alignItems: 'center', gap: 24, paddingVertical: 16 },
   identityText: { flex: 1, gap: 6 },
   photoActions: { flexDirection: 'row', alignItems: 'center', gap: 20 },
   photoButton: { paddingHorizontal: 24 },

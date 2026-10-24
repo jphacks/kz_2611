@@ -23,14 +23,17 @@ Claude Code / Codex などのAIエージェントと人間の両方が読む。�
 - Web専用API（window, document, localStorage）は直接使わない。必要なら `Platform.OS === 'web'` で分岐
 - Expo の API は記憶で書かず https://docs.expo.dev/versions/v58.0.0/ で確認する
 
-## 3. デザイン（Swiss・全画面で統一）
-- 色は app/src/ui/theme.ts の C だけ: 白 #FFFFFF / 薄灰 #F4F4F4 / 黒 #0A0A0A / 赤 #FF2D20 / 灰 #8A8A8A（+区切り線 #E2E2E2）。赤はアクセント1色だけ。新しい色・グラデーション・影を作らない
-- 角丸ゼロ（RADIUS=0）。丸はアバターと人数の丸ゲージだけ
-- 文字は Inter / Noto Sans JP（FONT）。見出しは太く大きく、数字は巨大に（例: 残り時間「あと 40 分」の40）。T（文字スタイル）と S（部品スタイル）を使う
-- 画面上部は ui/Header（日付＋大きな見出し）。タブ・選択肢は ui/Chip（四角）。シートは ui/Sheet
-- 絵文字をアイコンに使わない（アイコンは react-native-svg の線画）
-- 見本: docs/design/style12-swiss.png（候補12案は docs/design/sketch-styles-12.pdf、UIイメージは docs/design/ui-image/）
+## 3. デザイン（Color Pop・スマホ操作前提・全画面で統一）
+- 見本: docs/design/style11-colorpop.png（候補12案は docs/design/sketch-styles-12.pdf の STYLE 11、UIイメージは docs/design/ui-image/）
 - 元資料: docs/sources/（アイデアマップ、UI設計図、手書きUI図、説明音声の文字起こし）。始め方は CONTRIBUTING.md
+- 色は app/src/ui/theme.ts の C だけ: オレンジ #FF5A36 / 青 #3D5AFE / ピンク #FF3D9A / 緑 #00B37E / 薄灰 #F2F2F2 / 黒 #111111 / 締切間近の黄 #FFD43B。新しい色・グラデーション・影を作らない
+- 募集のカードはビビッドな単色＋白文字。色は popColor(タイトル) で決める（同じ遊びはいつも同じ色）
+- 角丸: カードは RADIUS（22）、チップ・ボタン・入力欄・バッジは PILL（丸いピル）。四角い枠や黒い太線は使わない
+- 主催者の丸の縁＝太い白リング（集まった人数）、カードの外枠＝白いゲージ（残り時間、10分以下で黄）、右下に黒いピル「あと◯分」
+- チャット: 自分は青い吹き出し（右）、相手は人ごとの淡い色（tint）、送信はオレンジの丸ボタン
+- 文字は Inter / Noto Sans JP（FONT）、見出しは太く大きく。T（文字）と S（部品）を使う
+- スマホ前提: タップできる所は高さ44px以上、入力欄の文字は16px以上（iPhoneで拡大されない）、下タブとシートは安全領域（useSafeAreaInsets）を空ける、PCでは画面中央に幅480pxで表示
+- 絵文字をアイコンに使わない（アイコンは react-native-svg の線画）
 
 ## 4. ディレクトリと担当（衝突を防ぐ最重要ルール）
 ```
