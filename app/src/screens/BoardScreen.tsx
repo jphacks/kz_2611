@@ -81,7 +81,6 @@ export function BoardScreen(p: ScreenProps) {
         // 参加前に開始した一覧取得で参加済みの表示を巻き戻さない。
         request.current++;
         setEvents(old => old.map(e => e.id === result.event.id ? result.event : e));
-        setChatId(result.event.id);
       }
     } catch (e) {
       if (active.current) setActionError(errMsg(e));
