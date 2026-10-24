@@ -124,6 +124,6 @@ function ChatSession({ eventId, me, onClose, onChanged, onEdit }: Omit<ChatSheet
         </View>}
       </KeyboardAvoidingView>
     </Sheet>
-    <ParticipantsSheet event={participants ? event : null} onClose={() => setParticipants(false)} />
+    <ParticipantsSheet me={me} event={participants ? event : null} onClose={() => setParticipants(false)} />
   </>;
 }

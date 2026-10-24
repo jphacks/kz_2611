@@ -1,10 +1,11 @@
 // 誘う：募集の作成・主催者による編集
 import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
-import { api, type EventItem, type Group } from '../api';
+import { api, type EventItem } from '../api';
 import type { ScreenProps } from '../Main';
 import { validateDraft, type Draft } from '../components/create/form';
 import { resolveTimeText, type TimePreset } from '../components/create/time';
+import { useSocialData } from '../hooks/useSocialData';
 import { errMsg } from '../lib/util';
 import { Chip } from '../ui/Chip';
 import { Header } from '../ui/Header';
@@ -17,7 +18,7 @@ export function CreateScreen(props: ScreenProps) {
   const editId = props.editEventId;
   const [draft, setDraft] = useState<Draft>(emptyDraft);
   const [timePreset, setTimePreset] = useState<TimePreset | null>(null);
-  const [groups, setGroups] = useState<Group[]>([]);
+  const { groups, loading: socialLoading, error: socialError, refresh: refreshSocial } = useSocialData(props.me);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
   const [error, setError] = useState('');
@@ -32,13 +33,9 @@ export function CreateScreen(props: ScreenProps) {
     setLoading(true); setLoadError(''); setError(''); setOriginal(null); setDraft(emptyDraft()); setTimePreset(null);
     (async () => {
       try {
-        const [list, detail] = await Promise.all([
-          api<{ groups: Group[] }>('/groups'),
-          editId ? api<{ event: EventItem }>(`/events/${editId}`) : Promise.resolve(null),
-        ]);
+        const detail = editId ? await api<{ event: EventItem }>(`/events/${editId}`) : null;
         if (!active) return;
         if (detail && (!detail.event.is_host || detail.event.host.id !== props.me.id)) throw new Error('編集できるのは主催者だけです');
-        setGroups(list.groups);
         if (detail) {
           const e = detail.event;
           setOriginal(e);
@@ -51,7 +48,7 @@ export function CreateScreen(props: ScreenProps) {
   }, [editId, props.me.id, attempt]);
   const change = <K extends keyof Draft>(key: K, value: Draft[K]) => setDraft(d => ({ ...d, [key]: value }));
   const submit = async () => {
-    if (saving.current || loading || loadError) return;
+    if (saving.current || loading || socialLoading || loadError || socialError) return;
     const invalid = validateDraft(draft);
     if (invalid) { setError(invalid); return; }
     saving.current = true; setBusy(true); setError('');
@@ -69,10 +66,10 @@ export function CreateScreen(props: ScreenProps) {
   return (
     <KeyboardAvoidingView style={S.screen} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <Header title={editId ? '募集を編集' : '誘う'} />
-      {loading ? <View style={styles.status}><ActivityIndicator color={C.ink} /><Text style={T.sub}>読み込み中…</Text></View> : loadError ? (
+      {loading || socialLoading ? <View style={styles.status}><ActivityIndicator color={C.ink} /><Text style={T.sub}>読み込み中…</Text></View> : (loadError || socialError) ? (
         <View style={[S.pad, styles.status]}>
-          <Text accessibilityRole="alert" style={S.error}>{loadError}</Text>
-          <Pressable accessibilityRole="button" style={S.btnGhost} onPress={() => setAttempt(n => n + 1)}><Text style={S.btnGhostText}>再読み込み</Text></Pressable>
+          <Text accessibilityRole="alert" style={S.error}>{loadError || socialError}</Text>
+          <Pressable accessibilityRole="button" style={S.btnGhost} onPress={() => { setAttempt(n => n + 1); void refreshSocial(); }}><Text style={S.btnGhostText}>再読み込み</Text></Pressable>
           {editId && <Pressable accessibilityRole="button" onPress={() => { props.clearNav(); props.go('board'); }}><Text style={T.body}>編集をやめる</Text></Pressable>}
         </View>
       ) : (

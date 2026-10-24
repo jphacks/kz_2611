@@ -1,12 +1,12 @@
 import { useEffect, useState } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 import { UserProfileSheet } from './UserProfileSheet';
-import type { EventItem } from '../api';
+import type { EventItem, Me } from '../api';
 import { Avatar } from '../ui/Avatar';
 import { Sheet } from '../ui/Sheet';
 import { C, T } from '../ui/theme';
-export interface ParticipantsSheetProps { event: EventItem | null; onClose: () => void }
-export function ParticipantsSheet({ event, onClose }: ParticipantsSheetProps) {
+export interface ParticipantsSheetProps { me: Me; event: EventItem | null; onClose: () => void }
+export function ParticipantsSheet({ event, me, onClose }: ParticipantsSheetProps) {
   const [selected, setSelected] = useState<{ eventId: number; userId: number } | null>(null);
   useEffect(() => { setSelected(null); }, [event?.id]);
   const selectedId = selected?.eventId === event?.id ? selected?.userId : undefined;
@@ -22,6 +22,6 @@ export function ParticipantsSheet({ event, onClose }: ParticipantsSheetProps) {
       </Pressable>)}
     </ScrollView>
   </Sheet>
-    {!!selectedId && <UserProfileSheet key={selectedId} userId={selectedId} onClose={() => setSelected(null)} />}
+    {!!selectedId && <UserProfileSheet me={me} key={selectedId} userId={selectedId} onClose={() => setSelected(null)} />}
   </>;
 }

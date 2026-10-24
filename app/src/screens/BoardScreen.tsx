@@ -1,6 +1,8 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, Text, View } from 'react-native';
-import { api, EventItem, Group, User } from '../api';
+import { useSocialData } from '../hooks/useSocialData';
+import { useEventDeadline } from '../hooks/useEventDeadline';
+import { api, EventItem } from '../api';
 import { ChatSheet } from '../components/ChatSheet';
 import { EventCard } from '../components/EventCard';
 import { compareBoardEvents } from '../components/board/eventOrder';
@@ -12,15 +14,14 @@ import { Header } from '../ui/Header';
 import { C, S, T } from '../ui/theme';
 
 export function BoardScreen(p: ScreenProps) {
-  const [groups, setGroups] = useState<Group[]>([]);
-  const [friendCount, setFriendCount] = useState<number | null>(null);
+  const { groups, friends, loading: socialLoading, error: metaError, refresh: refreshMeta } = useSocialData(p.me);
+  const friendCount = socialLoading ? null : friends.length;
   const [group, setGroup] = useState('all');
   const [events, setEvents] = useState<EventItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [metaError, setMetaError] = useState('');
   const [actionError, setActionError] = useState('');
-  const [now, setNow] = useState(Date.now());
+  const now = useEventDeadline(events);
   const [chatId, setChatId] = useState<number | null>(null);
   const [members, setMembers] = useState<EventItem | null>(null);
   const [joining, setJoining] = useState<number | null>(null);
@@ -34,8 +35,7 @@ export function BoardScreen(p: ScreenProps) {
   const request = useRef(0);
   useEffect(() => {
     active.current = true;
-    const timer = setInterval(() => setNow(Date.now()), 1000);
-    return () => { active.current = false; clearInterval(timer); };
+    return () => { active.current = false; };
   }, []);
   useEffect(() => {
     if (p.openEventId !== undefined) { setChatId(p.openEventId); p.clearNav(); }
@@ -55,24 +55,16 @@ export function BoardScreen(p: ScreenProps) {
       throw e;
     }
   }
-  async function refreshMeta() {
-    try {
-      const [g, f] = await Promise.all([api<{ groups: Group[] }>('/groups'), api<{ friends: User[] }>('/friends')]);
-      if (!active.current) return;
-      setGroups(g.groups); setFriendCount(f.friends.length); setMetaError('');
-      if (selected.current !== 'all' && !g.groups.some(x => String(x.id) === selected.current)) {
-        selected.current = 'all'; setGroup('all'); setEvents([]); setLoading(true); void refresh().catch(() => {});
-      }
-    } catch (e) { if (active.current) setMetaError(errMsg(e)); throw e; }
-  }
   usePolling(refresh, 10_000);
-  usePolling(refreshMeta, 10_000);
+  useEffect(() => {
+    if (group !== 'all' && !groups.some(g => String(g.id) === group)) select('all');
+  }, [groups]);
   function select(value: string) {
     if (value === selected.current) return;
     selected.current = value; setGroup(value); setEvents([]); setLoading(true); setError('');
     void refresh().catch(() => {});
   }
-  async function join(event: EventItem) {
+  const join = useCallback(async (event: EventItem) => {
     if (joiningRef.current) return;
     joiningRef.current = true; setJoining(event.id); setActionError('');
     try {
@@ -86,8 +78,8 @@ export function BoardScreen(p: ScreenProps) {
       if (active.current) setActionError(errMsg(e));
       void refresh().catch(() => {});
     } finally { joiningRef.current = false; if (active.current) setJoining(null); }
-  }
-  async function leave(event: EventItem) {
+  }, []);
+  const leave = useCallback(async (event: EventItem) => {
     if (joiningRef.current || event.is_host || !event.joined) return;
     joiningRef.current = true; setLeaving(event.id); setActionError('');
     try {
@@ -100,8 +92,8 @@ export function BoardScreen(p: ScreenProps) {
     } catch (e) {
       if (active.current) setActionError(errMsg(e));
     } finally { joiningRef.current = false; if (active.current) setLeaving(null); }
-  }
-  async function remove(event: EventItem) {
+  }, []);
+  const remove = useCallback(async (event: EventItem) => {
     if (deletingRef.current || !event.is_host) return;
     deletingRef.current = true; setDeleting(event.id); setActionError('');
     try {
@@ -116,7 +108,9 @@ export function BoardScreen(p: ScreenProps) {
     } catch (e) {
       if (active.current) setActionError(errMsg(e));
     } finally { deletingRef.current = false; if (active.current) setDeleting(null); }
-  }
+  }, []);
+  const open = useCallback((event: EventItem) => setChatId(event.id), []);
+  const showMembers = useCallback((event: EventItem) => setMembers(event), []);
   // 満員の募集は、参加していない人には表示しない（#33）。主催者・参加者には残す
   const visible = events.filter(e => e.expires_at > now && (e.joined || e.is_host || e.count < e.capacity)).sort(compareBoardEvents);
   return (
@@ -133,7 +127,7 @@ export function BoardScreen(p: ScreenProps) {
             <Pressable accessibilityRole="button" onPress={() => { setActionError(''); void refresh().catch(() => {}); void refreshMeta().catch(() => {}); }}><Text style={[T.body, { fontWeight: '800' }]}>再読み込み</Text></Pressable>
           </View>}
           {loading ? <View style={{ padding: 40 }}><ActivityIndicator color={C.ink} accessibilityLabel="募集を読み込み中" /></View> : visible.length ? visible.map(event =>
-            <EventCard key={event.id} event={event} now={now} joining={joining === event.id} leaving={leaving === event.id} deleting={deleting === event.id} onLeave={() => { void leave(event); }} onDelete={() => { void remove(event); }} onOpen={() => setChatId(event.id)} onJoin={() => { void join(event); }} onPressMembers={() => setMembers(event)} />
+            <EventCard key={event.id} event={event} joining={joining === event.id} leaving={leaving === event.id} deleting={deleting === event.id} onLeave={leave} onDelete={remove} onOpen={open} onJoin={join} onPressMembers={showMembers} />
           ) : !error && <View style={{ backgroundColor: C.surface, borderRadius: 22, padding: 24, gap: 16 }}>
             <Text style={T.h1}>募集中の遊びは{'\n'}まだありません</Text>
             <Text style={T.sub}>{friendCount === 0 ? 'まずは友達を追加して、一緒に遊ぶ仲間を見つけましょう。' : group === 'all' ? '最初のひと声を、あなたから。友達を誘ってみましょう。' : 'このグループで、最初の募集をしてみましょう。'}</Text>
@@ -147,7 +141,7 @@ export function BoardScreen(p: ScreenProps) {
         else setEvents(old => old.map(e => e.id === event.id ? event : e));
         void refresh().catch(() => {});
       }} />
-      <ParticipantsSheet event={members} onClose={() => setMembers(null)} />
+      <ParticipantsSheet me={p.me} event={members} onClose={() => setMembers(null)} />
     </View>
   );
 }
