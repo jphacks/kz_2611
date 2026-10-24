@@ -33,7 +33,7 @@
 | GET | /events?group=all\|<groupId> | — | { events: EventItem[] }（表示中＝expires_at > 今 のもの、締切が近い順） |
 | GET | /events/:id | — | { event: EventItem }（見えない→404。終了したものも参加者は見られる） |
 | POST | /events | title(1-20), place(0-30), time_text(0-20), capacity_min(2-20, 省略時は capacity と同じ), capacity(capacity_min〜20), duration_min(15/30/60/120), group_id(null か自分がメンバーのグループ) | 201 { event } |
-| PATCH | /events/:id | 上と同じ項目の一部 | { event }（主催者だけ。duration_min を変えたら expires_at = created_at + 新しい分数） |
+| PATCH | /events/:id | 上と同じ項目の一部 | { event }（主催者だけ。表示中の募集で duration_min の値を変えたときだけ expires_at = created_at + 新しい分数。その他の編集では期限を維持。満員終了・期限切れの募集は duration_min や定員の変更、参加取消後の編集でも再公開しない） |
 | DELETE | /events/:id | — | { ok }（主催者だけ。参加者とメッセージも消す） |
 | POST | /events/:id/join | — | { event }（定員・終了・見えない→400/400/404。1つのSQLで定員を確認して追加。system メッセージ「<名前>が参加しました」） |
 | DELETE | /events/:id/join | — | { event }（主催者は取り消せない→400。system メッセージ「<名前>が抜けました」） |

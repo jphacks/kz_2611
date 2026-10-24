@@ -1,4 +1,4 @@
-import { Route, HttpError, json, str, int, now, isFriend, Env, User } from './core';
+import { Route, HttpError, json, str, int, now, isFriend, Env, User, pickUser, userCols } from './core';
 
 interface Group { id: number; name: string; profile: string; owner_id: number }
 async function withMembers(env: Env, group: Group) {
@@ -9,7 +9,19 @@ async function withMembers(env: Env, group: Group) {
 export const groupRoutes: Route[] = [
   { method: 'GET', path: /^\/groups$/, handler: async ({ env, me }) => {
     const groups = await env.DB.prepare('SELECT g.id AS id, g.name, g.profile, g.owner_id FROM groups g JOIN group_members m ON m.group_id = g.id WHERE m.user_id = ? ORDER BY g.id').bind(me.id).all<Group>();
-    return json({ groups: await Promise.all(groups.results.map(g => withMembers(env, g))) });
+    const members = new Map<number, User[]>();
+    if (groups.results.length) {
+      const { results } = await env.DB.prepare(`SELECT m.group_id, ${userCols('u', 'member_')}
+        FROM group_members m JOIN users u ON u.id = m.user_id
+        WHERE m.group_id IN (SELECT CAST(value AS INTEGER) FROM json_each(?))
+        ORDER BY m.group_id, u.name, u.id`).bind(JSON.stringify(groups.results.map(g => g.id))).all();
+      for (const row of results) {
+        const id = Number(row.group_id);
+        if (!members.has(id)) members.set(id, []);
+        members.get(id)!.push(pickUser(row, 'member_'));
+      }
+    }
+    return json({ groups: groups.results.map(g => ({ ...g, members: members.get(g.id) ?? [] })) });
   } },
   { method: 'POST', path: /^\/groups$/, handler: async ({ env, me, body }) => {
     const b = await body();
