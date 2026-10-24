@@ -51,8 +51,8 @@ export function EventCard({ event, now, onOpen, onJoin, onLeave, onDelete, onPre
       return;
     }
     const loop = Animated.loop(Animated.sequence([
-      Animated.timing(wobble, { toValue: 1, duration: 900, useNativeDriver: true }),
-      Animated.timing(wobble, { toValue: 0, duration: 250, useNativeDriver: true }),
+      Animated.timing(wobble, { toValue: 1, duration: 1200, useNativeDriver: true }),
+      Animated.timing(wobble, { toValue: 0, duration: 350, useNativeDriver: true }),
     ]));
     loop.start();
     return () => { loop.stop(); wobble.setValue(0); };
