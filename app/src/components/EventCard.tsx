@@ -104,7 +104,7 @@ export function EventCard({ event, now, onOpen, onJoin, onLeave, onDelete, onPre
         <View {...responder.panHandlers} style={Platform.OS === 'web' ? { touchAction: 'pan-y' } as ViewStyle : undefined} accessibilityLabel={`${event.host.name}のアイコン。${canJoin ? '右へスワイプで参加' : canLeave ? '左へスワイプで参加を取り消す' : canDelete ? '左へスワイプで掲示を取り消す' : status}`}>
           <View style={styles.host}>
             <Svg width={100} height={100} style={StyleSheet.absoluteFill} viewBox="0 0 100 100">
-              <Circle cx={50} cy={50} r={ringR} fill="none" stroke="rgba(0,0,0,0.18)" strokeWidth={8} />
+              <Circle cx={50} cy={50} r={ringR} fill="none" stroke="rgba(255,255,255,0.18)" strokeWidth={8} />
               <Path d="M 50 6 A 44 44 0 0 1 50 94 A 44 44 0 0 1 50 6" fill="none" stroke={C.white} strokeWidth={8} strokeLinecap="round" strokeDasharray={`${ring * Math.min(1, event.count / event.capacity)} ${ring}`} />
             </Svg>
             <Avatar user={event.host} size={76} />
