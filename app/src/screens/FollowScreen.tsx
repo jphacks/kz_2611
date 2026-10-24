@@ -5,6 +5,7 @@ import { Header } from '../ui/Header';
 import { Avatar } from '../ui/Avatar';
 import { Sheet } from '../ui/Sheet';
 import { C, S, T } from '../ui/theme';
+import { useSocialData } from '../hooks/useSocialData';
 import { errMsg } from '../lib/util';
 import { InviteQr } from '../components/follow/InviteQr';
 import { inviteFromUrl, inviteLink } from '../components/follow/invite';
@@ -15,9 +16,7 @@ function Button({ label, onPress, disabled = false, ghost = false }: { label: st
 }
 
 export function FollowScreen({ me }: ScreenProps) {
-  const [friends, setFriends] = useState<User[]>([]);
-  const [groups, setGroups] = useState<Group[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { friends, groups, loading, error: socialError, refresh: reload } = useSocialData(me);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
@@ -31,16 +30,6 @@ export function FollowScreen({ me }: ScreenProps) {
   const [groupError, setGroupError] = useState('');
   const link = inviteLink(me.invite_code);
 
-  async function reload() {
-    setLoading(true); setError('');
-    const results = await Promise.allSettled([api<{ friends: User[] }>('/friends'), api<{ groups: Group[] }>('/groups')]);
-    if (results[0].status === 'fulfilled') setFriends(results[0].value.friends);
-    if (results[1].status === 'fulfilled') setGroups(results[1].value.groups);
-    const failed = results.find(r => r.status === 'rejected');
-    if (failed?.status === 'rejected') setError(errMsg(failed.reason));
-    setLoading(false);
-  }
-  useEffect(() => { void reload(); }, []);
   useEffect(() => {
     if (Platform.OS !== 'web') return;
     const code = inviteFromUrl(window.location.href);
@@ -64,7 +53,7 @@ export function FollowScreen({ me }: ScreenProps) {
     setBusy(true); setError(''); setNotice('');
     try {
       const { friend } = await api<{ friend: User }>('/friends', { body });
-      setFriends(current => [...current.filter(f => f.id !== friend.id), friend].sort((a, b) => a.name.localeCompare(b.name, 'ja')));
+      await reload();
       setHandle(''); setInvite(null);
       if ('invite_code' in body) clearInvite();
       setNotice(`${friend.name}さんと友達になりました`);
@@ -75,7 +64,7 @@ export function FollowScreen({ me }: ScreenProps) {
     setBusy(true); setError('');
     try {
       await api('/friends/' + remove.id, { method: 'DELETE' });
-      setFriends(current => current.filter(f => f.id !== remove.id));
+      await reload();
       setSelected(current => current.filter(id => id !== remove.id));
       setNotice(`${remove.name}さんを友達から削除しました`); setRemove(null);
     } catch (e) { setError(errMsg(e)); } finally { setBusy(false); }
@@ -84,8 +73,8 @@ export function FollowScreen({ me }: ScreenProps) {
     if (!name.trim() || busy) return;
     setBusy(true); setGroupError('');
     try {
-      const { group } = await api<{ group: Group }>('/groups', { body: { name: name.trim(), profile: profile.trim(), member_ids: selected } });
-      setGroups(current => [...current, group]); setSheet(null); setName(''); setProfile(''); setSelected([]);
+      await api<{ group: Group }>('/groups', { body: { name: name.trim(), profile: profile.trim(), member_ids: selected } });
+      await reload(); setSheet(null); setName(''); setProfile(''); setSelected([]);
       setNotice('グループを作成しました');
     } catch (e) { setGroupError(errMsg(e)); } finally { setBusy(false); }
   }
@@ -94,7 +83,7 @@ export function FollowScreen({ me }: ScreenProps) {
   return <View style={S.screen}>
     <Header title="フォロー" />
     <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-      {!!error && <View accessibilityRole="alert" style={styles.panel}><Text style={S.error}>{error}</Text><Button label="再読み込み" ghost onPress={() => void reload()} disabled={busy || loading} /></View>}
+      {!!(error || socialError) && <View accessibilityRole="alert" style={styles.panel}><Text style={S.error}>{error || socialError}</Text><Button label="再読み込み" ghost onPress={() => { setError(''); void reload(); }} disabled={busy || loading} /></View>}
       {!!notice && <Text accessibilityLiveRegion="polite" style={T.body}>{notice}</Text>}
       <View style={styles.heading}><Text style={T.h2}>友達</Text><Text style={T.huge}>{friends.length}</Text></View>
       <View style={styles.panel}>
@@ -113,7 +102,7 @@ export function FollowScreen({ me }: ScreenProps) {
     <Sheet visible={sheet !== null || !!remove || !!invite} onClose={close}>
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         <View style={styles.heading}><Text style={[T.h1, styles.grow]}>{remove ? '友達を削除' : invite ? '招待が届いています' : sheet === 'invite' ? '友達を招待' : 'グループを作成'}</Text><Button label="閉じる" ghost onPress={close} disabled={busy} /></View>
-        {(!!remove || !!invite) && !!error && <Text accessibilityRole="alert" style={S.error}>{error}</Text>}
+        {(!!remove || !!invite) && !!(error || socialError) && <Text accessibilityRole="alert" style={S.error}>{error || socialError}</Text>}
         {remove ? <><Text style={T.body}>{remove.name}さんを友達から削除しますか？ お互いの友達一覧から削除されます。</Text><Button label="削除する" disabled={busy} onPress={() => void deleteFriend()} /></> : invite ? <><View style={styles.row}><Avatar user={invite.user} size={56} /><View style={styles.grow}><Text style={T.h2}>{invite.user.name}</Text><Text style={T.sub}>@{invite.user.handle}</Text></View></View><Text style={T.body}>この人と友達になりますか？ 追加すると相互に友達になります。</Text><Button label="友達に追加する" disabled={busy} onPress={() => void addFriend({ invite_code: invite.code })} /><Button label="追加しない" ghost disabled={busy} onPress={close} /></> : sheet === 'invite' ? <><Text style={T.sub}>QRを読み取るか、リンクを友達に送ってください。</Text><View style={{ alignItems: 'center' }}><InviteQr value={link} /></View><Text style={T.h2}>{me.name}</Text><Text style={T.sub}>@{me.handle}</Text><Text selectable style={[T.body, styles.panel]}>{link}</Text><Text style={T.small}>リンクは長押し・選択してコピーできます。受け取った人はログイン後「フォロー」を開いてください。</Text></> : <>
           <Text style={T.body}>グループ名（必須・20文字まで）</Text><TextInput accessibilityLabel="グループ名" placeholder="例: 研究室" value={name} onChangeText={setName} maxLength={20} style={S.input} editable={!busy} />
           <Text style={T.body}>プロフィール（100文字まで）</Text><TextInput accessibilityLabel="グループのプロフィール" placeholder="どんなグループ？" value={profile} onChangeText={setProfile} maxLength={100} multiline style={S.input} editable={!busy} />

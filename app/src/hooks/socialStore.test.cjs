@@ -1,0 +1,22 @@
+const { test } = require('node:test');
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const vm = require('node:vm');
+const ts = require('typescript');
+test('画面間の並列取得を共有し、変更前の遅い応答は採用しない', async () => {
+  const pending = [];
+  const output = ts.transpileModule(fs.readFileSync(__dirname + '/socialStore.ts', 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText;
+  const exports = {};
+  vm.runInNewContext(output, { exports, require: () => ({ api: path => new Promise(resolve => pending.push({ path, resolve })) }) });
+  const store = exports.socialStore(1);
+  const first = store.refresh();
+  assert.equal(store.refresh(), first);
+  assert.equal(pending.length, 2);
+  const newer = store.refresh(true);
+  pending[2].resolve({ friends: [{ id: 2 }] }); pending[3].resolve({ groups: [] });
+  await newer;
+  pending[0].resolve({ friends: [] }); pending[1].resolve({ groups: [] });
+  await first;
+  assert.equal(store.getSnapshot().friends[0].id, 2);
+  assert.notEqual(exports.socialStore(2), store);
+});

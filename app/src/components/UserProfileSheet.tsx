@@ -1,14 +1,15 @@
 import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, Text, View } from 'react-native';
 import { api, type Me, type User } from '../api';
+import { refreshSocialData } from '../hooks/useSocialData';
 import { errMsg } from '../lib/util';
 import { Avatar } from '../ui/Avatar';
 import { Sheet } from '../ui/Sheet';
 import { C, S, T } from '../ui/theme';
 
-export function UserProfileSheet({ userId, onClose }: { userId: number; onClose: () => void }) {
+export function UserProfileSheet({ userId, me, onClose }: { userId: number; me: Me; onClose: () => void }) {
   const [profile, setProfile] = useState<{ user: User; is_friend: boolean } | null>(null);
-  const [self, setSelf] = useState(false);
+  const self = me.id === userId;
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -19,8 +20,8 @@ export function UserProfileSheet({ userId, onClose }: { userId: number; onClose:
   useEffect(() => {
     let active = true;
     setLoading(true); setError('');
-    Promise.all([api<{ user: User; is_friend: boolean }>(`/users/${userId}`), api<{ user: Me }>('/me')])
-      .then(([result, me]) => { if (active) { setProfile(result); setSelf(me.user.id === userId); } })
+    api<{ user: User; is_friend: boolean }>(`/users/${userId}`)
+      .then(result => { if (active) setProfile(result); })
       .catch(e => { if (active) setError(errMsg(e)); })
       .finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
@@ -30,6 +31,7 @@ export function UserProfileSheet({ userId, onClose }: { userId: number; onClose:
     submitting.current = true; setBusy(true); setError('');
     try {
       await api('/friends', { method: 'POST', body: { handle: profile.user.handle } });
+      await refreshSocialData(me);
       const result = await api<{ user: User; is_friend: boolean }>(`/users/${userId}`);
       if (mounted.current) setProfile(result);
     } catch (e) { if (mounted.current) setError(errMsg(e)); }

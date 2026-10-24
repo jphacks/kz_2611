@@ -13,9 +13,10 @@ function harness(overrides = {}) {
     stopAnimation() {}
     interpolate(config) { return { value: this, config }; }
   }
-  const element = (type, props, ...children) => ({ type, props: { ...props, children: children.flat() } });
+  const element = (type, props, ...children) => ({ type, props: { ...props, children: children.length ? children.flat() : props?.children || [] } });
   const react = {
-    createElement: element,
+    createElement: (type, props, ...children) => typeof type === 'function' ? type({ ...props, ...(children.length ? { children: children.flat() } : {}) }) : element(type, props, ...children),
+    memo: fn => fn,
     useRef(v) { const i = cursor++; return slots[i] ||= { current: v }; },
     useState(v) { const i = cursor++; if (!(i in slots)) slots[i] = v; return [slots[i], n => { slots[i] = n; }]; },
     useEffect(fn) { effects.push(fn); },
@@ -28,7 +29,8 @@ function harness(overrides = {}) {
   };
   const output = ts.transpileModule(source, { compilerOptions: { jsx: ts.JsxEmit.React, jsxFactory: 'React.createElement', module: ts.ModuleKind.CommonJS } }).outputText;
   const exports = {};
-  vm.runInNewContext(output, { exports, React: react, requestAnimationFrame: fn => { effects.push(fn); }, setTimeout: fn => fn(), require: id => id === 'react' ? react : id === 'react-native' ? rn : id === 'react-native-svg' ? { default: 'Svg', Circle: 'Circle', Path: 'Path', Rect: 'Rect' } : id.includes('Avatar') ? { Avatar: 'Avatar' } : { C: { white: '#fff', ink: '#111', yellow: '#FFD43B' }, FONT: 'Inter', PILL: 999, RADIUS: 22, popColor: () => '#FF5A36' } });
+  const ClockDate = class extends Date { static now() { return props.now; } };
+  vm.runInNewContext(output, { exports, Date: ClockDate, React: react, requestAnimationFrame: fn => { effects.push(fn); }, setTimeout: fn => fn(), require: id => id.includes('useClock') ? { useClock: () => props.now } : id === 'react' ? react : id === 'react-native' ? rn : id === 'react-native-svg' ? { default: 'Svg', Circle: 'Circle', Path: 'Path', Rect: 'Rect' } : id.includes('Avatar') ? { Avatar: 'Avatar' } : { C: { white: '#fff', ink: '#111', yellow: '#FFD43B' }, FONT: 'Inter', PILL: 999, RADIUS: 22, popColor: () => '#FF5A36' } });
   let props = { event: { id: 1, title: 'カラオケ', host: { name: '主催' }, members: [], count: 1, capacity: 4, duration_min: 60, expires_at: 3600000, joined: false, is_host: false }, now: 0, onJoin: () => { joins++; }, onLeave: () => { leaves++; }, onDelete: () => { deletes++; }, onOpen: () => { opens++; }, onPressMembers() {}, ...overrides };
   function render(change = {}) { props = { ...props, ...change }; cursor = 0; effects = []; const tree = exports.EventCard(props); const pending = effects; effects = []; pending.forEach(fn => fn()); return tree; }
   let tree = render(); tree.props.onLayout({ nativeEvent: { layout: { width: 358, height: 190 } } }); tree = render();
