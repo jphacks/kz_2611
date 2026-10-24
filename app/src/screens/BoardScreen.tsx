@@ -3,6 +3,7 @@ import { ActivityIndicator, Pressable, ScrollView, Text, View } from 'react-nati
 import { api, EventItem, Group, User } from '../api';
 import { ChatSheet } from '../components/ChatSheet';
 import { EventCard } from '../components/EventCard';
+import { compareBoardEvents } from '../components/board/eventOrder';
 import { ParticipantsSheet } from '../components/ParticipantsSheet';
 import { errMsg, usePolling } from '../lib/util';
 import type { ScreenProps } from '../Main';
@@ -24,7 +25,9 @@ export function BoardScreen(p: ScreenProps) {
   const [members, setMembers] = useState<EventItem | null>(null);
   const [joining, setJoining] = useState<number | null>(null);
   const [leaving, setLeaving] = useState<number | null>(null);
+  const [deleting, setDeleting] = useState<number | null>(null);
   const joiningRef = useRef(false);
+  const deletingRef = useRef(false);
   const active = useRef(true);
   const selected = useRef(group);
   selected.current = group;
@@ -99,8 +102,24 @@ export function BoardScreen(p: ScreenProps) {
       if (active.current) setActionError(errMsg(e));
     } finally { joiningRef.current = false; if (active.current) setLeaving(null); }
   }
+  async function remove(event: EventItem) {
+    if (deletingRef.current || !event.is_host) return;
+    deletingRef.current = true; setDeleting(event.id); setActionError('');
+    try {
+      await api<{ ok: boolean }>(`/events/${event.id}`, { method: 'DELETE' });
+      if (active.current) {
+        // 削除前に開始した一覧取得で掲示を復活させない。
+        request.current++;
+        setEvents(old => old.filter(e => e.id !== event.id));
+        setChatId(old => old === event.id ? null : old);
+        setMembers(old => old?.id === event.id ? null : old);
+      }
+    } catch (e) {
+      if (active.current) setActionError(errMsg(e));
+    } finally { deletingRef.current = false; if (active.current) setDeleting(null); }
+  }
   // 満員の募集は、参加していない人には表示しない（#33）。主催者・参加者には残す
-  const visible = events.filter(e => e.expires_at > now && (e.joined || e.is_host || e.count < e.capacity)).sort((a, b) => a.expires_at - b.expires_at);
+  const visible = events.filter(e => e.expires_at > now && (e.joined || e.is_host || e.count < e.capacity)).sort(compareBoardEvents);
   return (
     <View style={S.screen}>
       <View style={{ flex: 1, width: '100%', maxWidth: 680, alignSelf: 'center' }}>
@@ -115,7 +134,7 @@ export function BoardScreen(p: ScreenProps) {
             <Pressable accessibilityRole="button" onPress={() => { setActionError(''); void refresh().catch(() => {}); void refreshMeta().catch(() => {}); }}><Text style={[T.body, { fontWeight: '800' }]}>再読み込み</Text></Pressable>
           </View>}
           {loading ? <View style={{ padding: 40 }}><ActivityIndicator color={C.ink} accessibilityLabel="募集を読み込み中" /></View> : visible.length ? visible.map(event =>
-            <EventCard key={event.id} event={event} now={now} joining={joining === event.id} leaving={leaving === event.id} onLeave={() => { void leave(event); }} onOpen={() => setChatId(event.id)} onJoin={() => { void join(event); }} onPressMembers={() => setMembers(event)} />
+            <EventCard key={event.id} event={event} now={now} joining={joining === event.id} leaving={leaving === event.id} deleting={deleting === event.id} onLeave={() => { void leave(event); }} onDelete={() => { void remove(event); }} onOpen={() => setChatId(event.id)} onJoin={() => { void join(event); }} onPressMembers={() => setMembers(event)} />
           ) : !error && <View style={{ backgroundColor: C.surface, borderRadius: 22, padding: 24, gap: 16 }}>
             <Text style={T.h1}>募集中の遊びは{'\n'}まだありません</Text>
             <Text style={T.sub}>{friendCount === 0 ? 'まずは友達を追加して、一緒に遊ぶ仲間を見つけましょう。' : group === 'all' ? '最初のひと声を、あなたから。友達を誘ってみましょう。' : 'このグループで、最初の募集をしてみましょう。'}</Text>

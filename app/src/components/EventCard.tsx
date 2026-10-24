@@ -3,7 +3,7 @@ import { Animated, PanResponder, Platform, Pressable, StyleSheet, Text, View, ty
 import Svg, { Circle, Path, Rect } from 'react-native-svg';
 import type { EventItem } from '../api';
 import { Avatar } from '../ui/Avatar';
-import { C, FONT, RADIUS, popColor } from '../ui/theme';
+import { C, FONT, PILL, RADIUS, popColor } from '../ui/theme';
 
 export interface EventCardProps {
   event: EventItem;
@@ -11,45 +11,52 @@ export interface EventCardProps {
   onOpen: () => void;
   onJoin: () => void;
   onLeave: () => void;
+  onDelete: () => void;
   onPressMembers: () => void;
   joining?: boolean;
   leaving?: boolean;
+  deleting?: boolean;
 }
 
-export function EventCard({ event, now, onOpen, onJoin, onLeave, onPressMembers, joining = false, leaving = false }: EventCardProps) {
+export function EventCard({ event, now, onOpen, onJoin, onLeave, onDelete, onPressMembers, joining = false, leaving = false, deleting = false }: EventCardProps) {
   const [size, setSize] = useState({ width: 0, height: 0 });
   const offset = useRef(new Animated.Value(0)).current;
   const dragged = useRef(false);
   const dragging = useRef(false);
-  const swapped = !event.is_host && !leaving && (event.joined || joining);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const swapped = event.is_host ? !confirmDelete && !deleting : !leaving && (event.joined || joining);
   const travel = Math.max(0, size.width - 40 - 100);
   const swap = useRef(new Animated.Value(swapped ? 1 : 0)).current;
   const canJoin = !event.joined && !event.is_host && !joining && !leaving && travel > 0 && event.count < event.capacity && event.expires_at > now;
   const canLeave = event.joined && !event.is_host && !joining && !leaving && travel > 0 && event.expires_at > now;
-  const latest = useRef({ canJoin, canLeave, onJoin, onLeave, onOpen, travel, swapped });
-  latest.current = { canJoin, canLeave, onJoin, onLeave, onOpen, travel, swapped };
+  const canDelete = event.is_host && !joining && !leaving && !deleting && !confirmDelete && travel > 0 && event.expires_at > now;
+  const latest = useRef({ canJoin, canLeave, canDelete, onJoin, onLeave, onDelete, onOpen, travel, swapped });
+  latest.current = { canJoin, canLeave, canDelete, onJoin, onLeave, onDelete, onOpen, travel, swapped };
   const settle = (right: boolean) => {
     Animated.spring(offset, { toValue: right ? latest.current.travel : 0, useNativeDriver: false, overshootClamping: true }).start();
     Animated.timing(swap, { toValue: right ? 1 : 0, duration: 240, useNativeDriver: false }).start();
   };
-  // 参加結果は親の props を正とし、失敗時は左へ戻す。処理中は右端を保つ。
+  // 参加・削除の処理状態は親の props を正とし、失敗時は元の位置へ戻す。
   useEffect(() => {
+    if (deleting) setConfirmDelete(false);
     if (!dragging.current) settle(swapped);
-  }, [swapped, travel, event]);
+  }, [swapped, travel, event, deleting]);
   const responder = useRef(PanResponder.create({
     // アイコン上の操作だけを受け取り、縦方向はスクロールへ譲る。
-    onStartShouldSetPanResponder: () => latest.current.canJoin || latest.current.canLeave,
-    onMoveShouldSetPanResponderCapture: (_, g) => ((latest.current.canJoin && g.dx > 8) || (latest.current.canLeave && g.dx < -8)) && Math.abs(g.dx) > Math.abs(g.dy) * 1.5,
-    onMoveShouldSetPanResponder: (_, g) => ((latest.current.canJoin && g.dx > 8) || (latest.current.canLeave && g.dx < -8)) && Math.abs(g.dx) > Math.abs(g.dy) * 1.5,
+    onStartShouldSetPanResponder: () => latest.current.canJoin || latest.current.canLeave || latest.current.canDelete,
+    onMoveShouldSetPanResponderCapture: (_, g) => ((latest.current.canJoin && g.dx > 8) || ((latest.current.canLeave || latest.current.canDelete) && g.dx < -8)) && Math.abs(g.dx) > Math.abs(g.dy) * 1.5,
+    onMoveShouldSetPanResponder: (_, g) => ((latest.current.canJoin && g.dx > 8) || ((latest.current.canLeave || latest.current.canDelete) && g.dx < -8)) && Math.abs(g.dx) > Math.abs(g.dy) * 1.5,
     onPanResponderGrant: () => { dragged.current = true; dragging.current = true; offset.stopAnimation(); },
-    onPanResponderMove: (_, g) => offset.setValue(Math.max(0, Math.min((latest.current.canLeave ? latest.current.travel : 0) + g.dx, latest.current.travel))),
+    onPanResponderMove: (_, g) => offset.setValue(Math.max(0, Math.min((latest.current.canLeave || latest.current.canDelete ? latest.current.travel : 0) + g.dx, latest.current.travel))),
     onPanResponderRelease: (_, g) => {
       dragging.current = false;
       const horizontal = Math.abs(g.dx) > Math.abs(g.dy) * 1.5;
       const join = g.dx > latest.current.travel / 2 && horizontal && latest.current.canJoin;
       const leave = -g.dx > latest.current.travel / 2 && horizontal && latest.current.canLeave;
-      settle(leave ? false : join || latest.current.swapped);
-      if (join || leave) {
+      const del = -g.dx > latest.current.travel / 2 && horizontal && latest.current.canDelete;
+      settle(leave || del ? false : join || latest.current.swapped);
+      if (del) setConfirmDelete(true);
+      else if (join || leave) {
         if (leave) latest.current.onLeave(); else latest.current.onJoin();
         // 親から返る処理中・結果の props を正とする。
         requestAnimationFrame(() => settle(latest.current.swapped));
@@ -78,7 +85,7 @@ export function EventCard({ event, now, onOpen, onJoin, onLeave, onPressMembers,
   const minimum = event.capacity_min;
   const capacity = minimum && minimum !== event.capacity ? `${minimum}〜${event.capacity}` : `${event.capacity}`;
   const mins = Math.ceil(remaining / 60_000);
-  const status = leaving ? '取り消し中…' : joining ? '参加中…' : event.is_host ? '主催' : event.joined ? '参加中' : event.count >= event.capacity ? '満員' : remaining === 0 ? '終了' : '';
+  const status = deleting || leaving ? '取り消し中…' : joining ? '参加中…' : event.is_host ? '主催' : event.joined ? '参加中' : event.count >= event.capacity ? '満員' : remaining === 0 ? '終了' : '';
   return (
     <Pressable accessibilityRole="button" accessibilityLabel={`${event.title}、${event.count} / ${capacity}人、あと${mins}分。チャットを開く`}
       onPress={() => { if (!dragged.current) onOpen(); }}
@@ -94,7 +101,7 @@ export function EventCard({ event, now, onOpen, onJoin, onLeave, onPressMembers,
         </Svg>
       </View>
       <Animated.View style={[styles.left, { transform: [{ translateX: offset }], zIndex: 1 }]}>
-        <View {...responder.panHandlers} style={Platform.OS === 'web' ? { touchAction: 'pan-y' } as ViewStyle : undefined} accessibilityLabel={`${event.host.name}のアイコン。${canJoin ? '右へスワイプで参加' : canLeave ? '左へスワイプで参加を取り消す' : status}`}>
+        <View {...responder.panHandlers} style={Platform.OS === 'web' ? { touchAction: 'pan-y' } as ViewStyle : undefined} accessibilityLabel={`${event.host.name}のアイコン。${canJoin ? '右へスワイプで参加' : canLeave ? '左へスワイプで参加を取り消す' : canDelete ? '左へスワイプで掲示を取り消す' : status}`}>
           <View style={styles.host}>
             <Svg width={100} height={100} style={StyleSheet.absoluteFill} viewBox="0 0 100 100">
               <Circle cx={50} cy={50} r={ringR} fill="none" stroke="rgba(0,0,0,0.18)" strokeWidth={8} />
@@ -120,6 +127,13 @@ export function EventCard({ event, now, onOpen, onJoin, onLeave, onPressMembers,
         <Svg width={12} height={12} viewBox="0 0 24 24"><Circle cx={12} cy={12} r={9} stroke={soon ? C.ink : C.white} strokeWidth={2.5} fill="none" /><Path d="M12 7 V12 L15 14" stroke={soon ? C.ink : C.white} strokeWidth={2.5} fill="none" /></Svg>
         <Text style={[styles.badgeText, soon && { color: C.ink }]}>あと{mins}分</Text>
       </View>
+      {confirmDelete && !deleting && <View accessibilityRole="alert" style={[styles.confirm, { backgroundColor: bg }]}>
+        <Text style={styles.confirmTitle}>掲示を取り消しますか？</Text>
+        <View style={styles.confirmActions}>
+          <Pressable accessibilityRole="button" accessibilityLabel="掲示を取り消す" onPress={e => { e.stopPropagation(); onDelete(); }} style={[styles.confirmButton, styles.confirmDanger]}><Text style={styles.confirmDangerText}>取り消す</Text></Pressable>
+          <Pressable accessibilityRole="button" accessibilityLabel="掲示の取り消しをやめる" onPress={e => { e.stopPropagation(); setConfirmDelete(false); }} style={[styles.confirmButton, styles.confirmCancel]}><Text style={styles.confirmCancelText}>やめる</Text></Pressable>
+        </View>
+      </View>}
     </Pressable>
   );
 }
@@ -137,6 +151,14 @@ const styles = StyleSheet.create({
   cap: { fontSize: 14, fontWeight: '800', color: 'rgba(255,255,255,0.85)' },
   badge: { position: 'absolute', right: 16, bottom: 14, flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: C.ink, borderRadius: 999, paddingHorizontal: 12, height: 30 },
   badgeText: { fontFamily: FONT, color: C.white, fontWeight: '900', fontSize: 13 },
-  status: { position: 'absolute', left: 16, bottom: 14, backgroundColor: 'rgba(255,255,255,0.25)', borderRadius: 999, paddingHorizontal: 12, height: 30, justifyContent: 'center' },
+  status: { position: 'absolute', left: 16, bottom: 14, backgroundColor: 'rgba(255,255,255,0.25)', borderRadius: PILL, paddingHorizontal: 12, height: 30, justifyContent: 'center' },
   statusText: { fontFamily: FONT, color: C.white, fontWeight: '800', fontSize: 12 },
+  confirm: { position: 'absolute', top: 0, right: 0, bottom: 0, left: 0, zIndex: 3, alignItems: 'center', justifyContent: 'center', padding: 20, gap: 12 },
+  confirmTitle: { fontFamily: FONT, color: C.white, fontWeight: '900', fontSize: 20, lineHeight: 26, textAlign: 'center' },
+  confirmActions: { flexDirection: 'row', justifyContent: 'center', gap: 8 },
+  confirmButton: { minWidth: 96, minHeight: 44, borderRadius: PILL, paddingHorizontal: 16, alignItems: 'center', justifyContent: 'center' },
+  confirmDanger: { backgroundColor: C.ink },
+  confirmDangerText: { fontFamily: FONT, color: C.white, fontWeight: '800', fontSize: 15 },
+  confirmCancel: { backgroundColor: C.white },
+  confirmCancelText: { fontFamily: FONT, color: C.ink, fontWeight: '800', fontSize: 15 },
 });
