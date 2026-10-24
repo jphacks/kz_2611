@@ -19,7 +19,9 @@ const me = (env: Env, id: number) => env.DB.prepare(`SELECT ${PUBLIC_USER}, invi
 export const authRoutes: Route[] = [
   { method: 'POST', path: /^\/register$/, auth: false, handler: async ({ env, body, req }) => {
     const b = await body();
-    await rateLimit(env, 'register:' + (req.headers.get('cf-connecting-ip') || 'local'));
+    // 本番（Cloudflare 経由）だけ IP ごとに制限する。手元・CI のテストでは IP ヘッダが無いので制限しない
+    const ip = req.headers.get('cf-connecting-ip');
+    if (ip && !['127.0.0.1', '::1'].includes(ip)) await rateLimit(env, 'register:' + ip);
     const handle = str(b.handle, 'ID', 3, 20);
     if (!HANDLE.test(handle)) throw new HttpError(400, 'IDは英数字と_で3〜20文字にしてください');
     const name = str(b.name, '名前', 1, 20);
