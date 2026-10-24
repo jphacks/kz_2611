@@ -18,7 +18,7 @@ export function AuthScreen({ onDone }: { onDone: (me: Me) => void }) {
   };
   return (
     <View style={[S.screen, { padding: 24, justifyContent: 'center', gap: 12 }]}>
-      <Text style={T.date}>FUKKARU</Text>
+      <Text style={T.date}>このゆびとまれ</Text>
       <Text style={T.screenTitle}>{mode === 'login' ? 'ログイン' : 'はじめる'}</Text>
       <TextInput style={S.input} placeholder="ID（英数字）" autoCapitalize="none" value={handle} onChangeText={setHandle} />
       {mode === 'register' && <TextInput style={S.input} placeholder="名前" value={name} onChangeText={setName} />}

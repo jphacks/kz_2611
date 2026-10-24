@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "フッ軽遊び（仮）",
+    "name": "このゆびとまれ",
     "slug": "kz2611",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -20,7 +20,7 @@
     },
     "web": {
       "favicon": "./assets/favicon.png",
-      "name": "フッ軽遊び（仮）"
+      "name": "このゆびとまれ"
     }
   }
 }
