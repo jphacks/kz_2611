@@ -9,9 +9,8 @@ import { Chip } from '../ui/Chip';
 import { Header } from '../ui/Header';
 import { C, S, T } from '../ui/theme';
 
-const TITLES = ['カラオケ', 'ご飯', 'ラーメン', 'ドライブ', 'バドミントン'];
-const TIMES = ['今すぐ', '30分後', '1時間後', '19:00〜'];
-const emptyDraft = (): Draft => ({ title: '', place: '', time_text: '今すぐ', capacity: 4, duration_min: 30, group_id: null });
+const TIMES = ['今すぐ', '30分後', '1時間後'];
+const emptyDraft = (): Draft => ({ title: '', place: '', time_text: '今すぐ', capacity: 4, capacity_min: 2, duration_min: 30, group_id: null });
 
 export function CreateScreen(props: ScreenProps) {
   const editId = props.editEventId;
@@ -41,7 +40,7 @@ export function CreateScreen(props: ScreenProps) {
         if (detail) {
           const e = detail.event;
           setOriginal(e);
-          setDraft({ title: e.title, place: e.place, time_text: e.time_text, capacity: e.capacity, duration_min: e.duration_min, group_id: e.group_id });
+          setDraft({ title: e.title, place: e.place, time_text: e.time_text, capacity: e.capacity, capacity_min: e.capacity_min || e.capacity, duration_min: e.duration_min, group_id: e.group_id });
         }
       } catch (e) { if (active) setLoadError(errMsg(e)); }
       finally { if (active) setLoading(false); }
@@ -78,7 +77,6 @@ export function CreateScreen(props: ScreenProps) {
         <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.form}>
           <View style={styles.section}>
             <Text style={T.h2}>やること</Text>
-            <View style={styles.chips}>{TITLES.map(title => <Chip key={title} label={title} on={draft.title === title} onPress={() => !busy && change('title', title)} />)}</View>
             <TextInput accessibilityLabel="やること" editable={!busy} style={[S.input, styles.titleInput]} placeholder="何して遊ぶ？（20文字以内）" maxLength={20} value={draft.title} onChangeText={v => change('title', v)} />
           </View>
           <View style={styles.section}>
@@ -92,11 +90,19 @@ export function CreateScreen(props: ScreenProps) {
           </View>
           <View style={styles.section}>
             <Text style={T.h2}>人数<Text style={T.sub}>　あなたを含めて</Text></Text>
-            <View style={styles.counter}>
-              <Pressable accessibilityRole="button" accessibilityLabel="人数を減らす" disabled={busy || draft.capacity <= 2} style={[styles.step, draft.capacity <= 2 && styles.disabled]} onPress={() => setDraft(d => ({ ...d, capacity: Math.max(2, d.capacity - 1) }))}><Text style={T.h1}>−</Text></Pressable>
-              <View style={styles.number}><Text accessibilityLiveRegion="polite" style={[T.huge, styles.digit]}>{draft.capacity}</Text><Text style={T.sub}>人</Text></View>
-              <Pressable accessibilityRole="button" accessibilityLabel="人数を増やす" disabled={busy || draft.capacity >= 20} style={[styles.step, draft.capacity >= 20 && styles.disabled]} onPress={() => setDraft(d => ({ ...d, capacity: Math.min(20, d.capacity + 1) }))}><Text style={T.h1}>＋</Text></Pressable>
-            </View>
+            <Text accessibilityLiveRegion="polite" style={T.h2}>{draft.capacity_min}〜{draft.capacity}人</Text>
+            {(['capacity_min', 'capacity'] as const).map(key => {
+              const lower = key === 'capacity_min';
+              const min = lower ? 2 : draft.capacity_min;
+              const max = lower ? draft.capacity : 20;
+              const label = lower ? '下限' : '上限';
+              return <View key={key} style={styles.counter}>
+                <Text style={T.body}>{label}</Text>
+                <Pressable accessibilityRole="button" accessibilityLabel={`${label}を減らす`} disabled={busy || draft[key] <= min} style={[styles.step, draft[key] <= min && styles.disabled]} onPress={() => change(key, Math.max(min, draft[key] - 1))}><Text style={T.h1}>−</Text></Pressable>
+                <Text style={T.h1}>{draft[key]}人</Text>
+                <Pressable accessibilityRole="button" accessibilityLabel={`${label}を増やす`} disabled={busy || draft[key] >= max} style={[styles.step, draft[key] >= max && styles.disabled]} onPress={() => change(key, Math.min(max, draft[key] + 1))}><Text style={T.h1}>＋</Text></Pressable>
+              </View>;
+            })}
             <Text style={T.small}>2〜20人</Text>
           </View>
           <View style={styles.section}>
@@ -127,8 +133,6 @@ const styles = StyleSheet.create({
   titleInput: { fontSize: 22, fontWeight: '800' },
   counter: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: C.surface, borderRadius: 22, paddingHorizontal: 16, paddingVertical: 8 },
   step: { width: 52, height: 52, borderRadius: 26, alignItems: 'center', justifyContent: 'center', backgroundColor: C.white },
-  number: { flexDirection: 'row', alignItems: 'baseline', gap: 8 },
-  digit: { fontSize: 72, lineHeight: 86 },
   disabled: { opacity: 0.35 },
   status: { paddingVertical: 32, gap: 16 },
 });

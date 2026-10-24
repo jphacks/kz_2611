@@ -9,6 +9,7 @@ s, r = call('POST', '/events', payload, host); expect('募集作成', s, 201)
 event = r['event']; eid = event['id']; path = f'/events/{eid}'
 expect('主催者', event['host'], {k: user[k] for k in ('id', 'handle', 'name', 'avatar')})
 expect('主催者以外の参加者', event['members'], [])
+expect('省略した下限は定員', event.get('capacity_min'), 2)
 expect('主催者込み人数', event['count'], 1)
 expect('主催者参加済み', event['joined'], True)
 expect('主催者フラグ', event['is_host'], True)
@@ -58,6 +59,8 @@ if db_path:
     if local_state.resolve() not in db_path.parents:
         raise RuntimeError('DBフィクスチャはこのクローンのローカルD1だけに使用できます')
     db = sqlite3.connect(str(db_path))
+    # 前半の友達経由テストで作った通知は、競合検証から分離する。
+    db.execute('DELETE FROM messages WHERE event_id = ?', (eid,)); db.commit()
     third, third_user = new_user('eventthird')
     cursor = db.execute('INSERT INTO groups (owner_id, name, profile, created_at) VALUES (?, ?, ?, ?)',
                         (user['id'], 'テストグループ', '', event['created_at']))
@@ -99,3 +102,51 @@ else:
     print('skip D1境界値検証（KZ_EVENTS_TEST_DB 未指定）')
     s, _ = call('DELETE', path, token=host); expect('募集削除', s, 200)
 s, _ = call('GET', path, token=host); expect('削除後404', s, 404)
+
+# 人数の幅: 作成・編集・全EventItem経路・既存データの互換性。
+for minimum in (0, 1, 21, 2.5, True, None):
+    s, _ = call('POST', '/events', dict(payload, capacity=3, capacity_min=minimum), host)
+    expect(f'下限の入力チェック {minimum!r}', s, 400)
+s, _ = call('POST', '/events', dict(payload, capacity=3, capacity_min=4), host)
+expect('下限が上限を超える作成は不可', s, 400)
+s, r = call('POST', '/events', dict(payload, capacity=3, capacity_min=2), host)
+expect('幅を持つ募集作成', s, 201)
+rid = r['event']['id']; rp = f'/events/{rid}'
+expect('作成した下限', r['event']['capacity_min'], 2)
+expect('作成した上限', r['event']['capacity'], 3)
+for endpoint, collection in (('/events', 'events'), ('/talks', 'talks')):
+    s, r = call('GET', endpoint, token=host); expect(endpoint, s, 200)
+    entries = r[collection] if collection == 'events' else [t['event'] for t in r[collection]]
+    expect(endpoint + 'の下限', next(e for e in entries if e['id'] == rid)['capacity_min'], 2)
+s, r = call('GET', rp, token=host); expect('詳細の下限', r['event']['capacity_min'], 2)
+for minimum in (0, 1, 21, 2.5, True, None, 4):
+    s, _ = call('PATCH', rp, {'capacity_min': minimum}, host)
+    expect(f'編集の下限チェック {minimum!r}', s, 400)
+s, r = call('PATCH', rp, {'capacity': 20, 'capacity_min': 20}, host)
+expect('最大値の編集', s, 200); expect('最大下限', r['event']['capacity_min'], 20)
+s, r = call('PATCH', rp, {'capacity': 3}, host)
+expect('編集の下限省略', s, 200); expect('省略時は上限', r['event']['capacity_min'], 3)
+s, r = call('PATCH', rp, {'capacity_min': 2}, host); expect('下限だけ編集', s, 200)
+# 主催者のjoinも同じEventItemを返す。
+s, r = call('POST', rp + '/join', token=host)
+expect('参加レスポンスの下限', r['event']['capacity_min'], 2)
+if db_path:
+    db = sqlite3.connect(str(db_path))
+    db.execute('UPDATE events SET capacity_min = 0 WHERE id = ?', (rid,)); db.commit()
+    for endpoint, collection in ((rp, None), ('/events', 'events'), ('/talks', 'talks')):
+        s, r = call('GET', endpoint, token=host)
+        entries = [r['event']] if collection is None else r[collection] if collection == 'events' else [t['event'] for t in r[collection]]
+        expect(endpoint + 'は既存の0を返す', next(e for e in entries if e['id'] == rid)['capacity_min'], 0)
+    db.close()
+# 下限に達しても上限までは参加できる。
+s, _ = call('POST', '/friends', {'handle': user['handle']}, other); expect('幅テストの友達追加', s, 200)
+third, third_user = new_user('rangeThird')
+s, _ = call('POST', '/friends', {'handle': user['handle']}, third); expect('3人目の友達追加', s, 200)
+for token, count in ((other, 2), (third, 3)):
+    s, r = call('POST', rp + '/join', token=token)
+    expect('上限までは参加できる', s, 200); expect('参加人数', r['event']['count'], count)
+s, _ = call('PATCH', rp, {'capacity': 2, 'capacity_min': 2}, host)
+expect('現在人数未満への縮小不可', s, 400)
+s, r = call('DELETE', rp + '/join', token=third)
+expect('参加取消レスポンスに下限', 'capacity_min' in r['event'], True)
+s, _ = call('DELETE', rp, token=host); expect('幅テストの募集削除', s, 200)
