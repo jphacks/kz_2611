@@ -34,6 +34,6 @@ npm run test:api       # dev:api を起動した状態で
 2. 新しい作業は Issue テンプレート（何を／なぜ／完了条件）で Issue を作ってから始める
 3. ブランチ → PR → CI（check）が通ったら squash でマージ
 
-## 公開（オーナーだけ）
+## 公開（自動）
 - 公開先: https://kz2611.pages.dev（Cloudflare Pages プロジェクト kz2611、D1 kz2611-db）
-- main へのマージでは公開されない。オーナーが確認してから手で公開する
+- main にマージされると GitHub Actions が自動で公開する（手でデプロイしない）。結果は Actions の deploy ジョブで確認

@@ -103,9 +103,11 @@ npm run test:api           # dev:api を起動した状態で。手元以外に�
 6. `.github/workflows/`・`migrations/`・認証・`wrangler.toml` の変更は、他の1人に見てもらってからマージ
 7. マージは squash だけ。Issue は `Closes #番号` で閉じる
 
-## 9. 公開
-- 公開はオーナーが確認してから手で行う（main へのマージでは公開されない）
-- 人もエージェントも実行しない: `wrangler pages deploy`、`wrangler d1 ... --remote`
+## 9. 公開（自動）
+- main にマージされると GitHub Actions（.github/workflows/ci.yml の deploy）が、本番DBの更新 → 公開 → 公開後の確認 を自動で行う。マージ＝公開
+- だから人もエージェントも手でデプロイしない: `wrangler pages deploy`、`wrangler d1 ... --remote` は実行しない（ログインも鍵も要らない）
+- 公開の結果は `gh run list -R jphacks/kz_2611 --branch main -L 1` で確かめる。deploy が失敗したら、マージした人が原因を直す
+- Cloudflare の鍵は GitHub の Environment `production` の secret にだけある。ワークフローを変えるときは他の1人に見てもらう（8章）
 
 ## 10. AIエージェントへの追加ルール
 - 作業の最初に、仕様書・docs/api.md・担当の Issue とコメントを読み、8章の手順で空きを確認する
