@@ -14,7 +14,7 @@
 
 ## プロフィール（担当: functions/lib/profile.ts）
 | PATCH | /me | name?, avatar?（data URL, 200KB以内, null で削除） | { user: Me } |
-| GET | /users/:id | — | { user: User, is_friend } 友達か本人だけ。それ以外は 404 |
+| GET | /users/:id | — | { user: User, is_friend } 友達・本人・同じイベントの参加者どうし（主催者含む）だけ。それ以外は 404 |
 
 ## 友達（担当: functions/lib/friends.ts）
 | GET | /friends | — | { friends: User[] }（名前順） |
