@@ -78,7 +78,6 @@ export function ProfileScreen(props: ScreenProps) {
             <Text style={T.sub}>写真を削除</Text>
           </Pressable>}
         </View>
-        <Text style={T.small}>写真は長辺256px・JPEGに縮小して保存します</Text>
         <View style={styles.field}>
           <Text style={T.h2}>名前</Text>
           <TextInput accessibilityLabel="名前" value={name} editable={!busy} onChangeText={value => { setName(value); setError(''); setNotice(''); }} maxLength={20} style={S.input} placeholder="名前を入力" placeholderTextColor={C.muted} returnKeyType="done" onSubmitEditing={save} />
