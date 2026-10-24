@@ -25,7 +25,9 @@ export interface Me extends User { invite_code: string }
 export interface Group { id: number; name: string; profile: string; owner_id: number; members: User[] }
 export interface EventItem {
   id: number; title: string; place: string; time_text: string;
-  capacity: number; duration_min: number; expires_at: number; created_at: number;
+  capacity: number;              // 人数の上限（主催者を含む）
+  capacity_min: number;          // 人数の下限（主催者を含む）。0 なら下限なし（capacity だけの表示）
+  duration_min: number; expires_at: number; created_at: number;
   group_id: number | null; group_name: string | null;
   host: User; members: User[];   // members は主催者を除く参加者
   count: number;                 // 主催者を含む人数
