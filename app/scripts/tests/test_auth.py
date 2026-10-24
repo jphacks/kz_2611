@@ -1,0 +1,11 @@
+from lib import call, expect, new_user, SUFFIX
+s, _ = call('GET', '/health'); expect('health', s, 200)
+s, _ = call('GET', '/me'); expect('me without token', s, 401)
+t, u = new_user('auth')
+s, r = call('GET', '/me', token=t); expect('me', s, 200); expect('me handle', r['user']['handle'], u['handle'])
+expect('no pass_hash', 'pass_hash' in r['user'], False)
+s, _ = call('POST', '/register', {'handle': u['handle'], 'name': 'x', 'password': 'password123'}); expect('dup handle', s, 409)
+s, _ = call('POST', '/login', {'handle': u['handle'], 'password': 'wrongpass'}); expect('wrong password', s, 401)
+s, r = call('POST', '/login', {'handle': u['handle'], 'password': 'password123'}); expect('login', s, 200)
+s, _ = call('POST', '/logout', token=r['token']); expect('logout', s, 200)
+s, _ = call('GET', '/me', token=r['token']); expect('me after logout', s, 401)

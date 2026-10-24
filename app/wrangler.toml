@@ -1,0 +1,9 @@
+name = "kz2611"
+pages_build_output_dir = "dist"
+compatibility_date = "2026-10-01"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "kz2611-db"
+database_id = "c72e5009-2b55-46cd-af98-e518476f70f3"
+migrations_dir = "migrations"

@@ -1,0 +1,33 @@
+name: CI
+on:
+  pull_request:
+  push:
+    branches: [main]
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: app
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm, cache-dependency-path: app/package-lock.json }
+      - run: npm ci
+      - name: マイグレーションのルール確認
+        run: bash scripts/check_migrations.sh origin/main
+      - name: 型チェック
+        run: npm run typecheck
+      - name: Web書き出し
+        run: npm run build
+      - name: 手元DBを作成
+        run: npm run db:migrate:local
+      - name: APIテスト
+        run: |
+          npx wrangler pages dev dist --port 8788 > /tmp/wrangler.log 2>&1 &
+          for i in $(seq 1 60); do curl -s localhost:8788/api/health > /dev/null && break; sleep 2; done
+          npm run test:api || (cat /tmp/wrangler.log; exit 1)
