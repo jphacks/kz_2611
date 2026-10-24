@@ -4,17 +4,19 @@ import { ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, ScrollVie
 import { api, type EventItem, type Group } from '../api';
 import type { ScreenProps } from '../Main';
 import { validateDraft, type Draft } from '../components/create/form';
+import { resolveTimeText, type TimePreset } from '../components/create/time';
 import { errMsg } from '../lib/util';
 import { Chip } from '../ui/Chip';
 import { Header } from '../ui/Header';
 import { C, S, T } from '../ui/theme';
 
-const TIMES = ['今すぐ', '30分後', '1時間後'];
-const emptyDraft = (): Draft => ({ title: '', place: '', time_text: '今すぐ', capacity: 4, capacity_min: 2, duration_min: 30, group_id: null });
+const TIMES: TimePreset[] = ['今すぐ', '30分後', '1時間後'];
+const emptyDraft = (): Draft => ({ title: '', place: '', time_text: '', capacity: 4, capacity_min: 2, duration_min: 30, group_id: null });
 
 export function CreateScreen(props: ScreenProps) {
   const editId = props.editEventId;
   const [draft, setDraft] = useState<Draft>(emptyDraft);
+  const [timePreset, setTimePreset] = useState<TimePreset | null>(null);
   const [groups, setGroups] = useState<Group[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
@@ -27,7 +29,7 @@ export function CreateScreen(props: ScreenProps) {
   useEffect(() => {
     let active = true;
     generation.current += 1;
-    setLoading(true); setLoadError(''); setError(''); setOriginal(null); setDraft(emptyDraft());
+    setLoading(true); setLoadError(''); setError(''); setOriginal(null); setDraft(emptyDraft()); setTimePreset(null);
     (async () => {
       try {
         const [list, detail] = await Promise.all([
@@ -55,7 +57,7 @@ export function CreateScreen(props: ScreenProps) {
     saving.current = true; setBusy(true); setError('');
     const current = generation.current;
     try {
-      const body: Partial<Draft> = { ...draft, title: draft.title.trim(), place: draft.place.trim(), time_text: draft.time_text.trim() };
+      const body: Partial<Draft> = { ...draft, title: draft.title.trim(), place: draft.place.trim(), time_text: resolveTimeText(draft.time_text, timePreset, new Date()) };
       // 編集で表示時間を変えなければ、締切を計算し直さない。
       if (original && original.duration_min === draft.duration_min) delete body.duration_min;
       await api(editId ? `/events/${editId}` : '/events', { method: editId ? 'PATCH' : 'POST', body });
@@ -77,16 +79,16 @@ export function CreateScreen(props: ScreenProps) {
         <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.form}>
           <View style={styles.section}>
             <Text style={T.h2}>やること</Text>
-            <TextInput accessibilityLabel="やること" editable={!busy} style={[S.input, styles.titleInput]} placeholder="何して遊ぶ？（20文字以内）" maxLength={20} value={draft.title} onChangeText={v => change('title', v)} />
+            <TextInput accessibilityLabel="やること" editable={!busy} style={[S.input, styles.titleInput]} maxLength={20} value={draft.title} onChangeText={v => change('title', v)} />
           </View>
           <View style={styles.section}>
             <Text style={T.h2}>場所<Text style={T.sub}>　任意</Text></Text>
-            <TextInput accessibilityLabel="場所" editable={!busy} style={S.input} placeholder="駅前、いつものお店など" maxLength={30} value={draft.place} onChangeText={v => change('place', v)} />
+            <TextInput accessibilityLabel="場所" editable={!busy} style={S.input} maxLength={30} value={draft.place} onChangeText={v => change('place', v)} />
           </View>
           <View style={styles.section}>
             <Text style={T.h2}>時間<Text style={T.sub}>　任意</Text></Text>
-            <View style={styles.chips}>{TIMES.map(time => <Chip key={time} label={time} on={draft.time_text === time} onPress={() => !busy && change('time_text', time)} />)}</View>
-            <TextInput accessibilityLabel="時間" editable={!busy} style={S.input} placeholder="自由に入力（20文字以内）" maxLength={20} value={draft.time_text} onChangeText={v => change('time_text', v)} />
+            <View style={styles.chips}>{TIMES.map(time => <Chip key={time} label={time} on={timePreset === time} onPress={() => { if (!busy) { setTimePreset(time); change('time_text', ''); } }} />)}</View>
+            <TextInput accessibilityLabel="時間" editable={!busy} style={S.input} maxLength={20} value={draft.time_text} onChangeText={v => { setTimePreset(null); change('time_text', v); }} />
           </View>
           <View style={styles.section}>
             <Text style={T.h2}>人数<Text style={T.sub}>　あなたを含めて</Text></Text>
