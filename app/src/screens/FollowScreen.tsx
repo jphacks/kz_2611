@@ -7,6 +7,7 @@ import { Sheet } from '../ui/Sheet';
 import { C, S, T } from '../ui/theme';
 import { useSocialData } from '../hooks/useSocialData';
 import { errMsg } from '../lib/util';
+import { GroupEditSheet } from '../components/follow/GroupEditSheet';
 import { InviteQr } from '../components/follow/InviteQr';
 import { inviteFromUrl, inviteLink } from '../components/follow/invite';
 import type { ScreenProps } from '../Main';
@@ -28,6 +29,8 @@ export function FollowScreen({ me }: ScreenProps) {
   const [profile, setProfile] = useState('');
   const [selected, setSelected] = useState<number[]>([]);
   const [groupError, setGroupError] = useState('');
+  const [editingGroupId, setEditingGroupId] = useState<number | null>(null);
+  const editingGroup = groups.find(group => group.id === editingGroupId);
   const link = inviteLink(me.invite_code);
 
   useEffect(() => {
@@ -97,8 +100,9 @@ export function FollowScreen({ me }: ScreenProps) {
       <View style={styles.heading}><Text style={T.h2}>グループ</Text><Text style={T.huge}>{groups.length}</Text></View>
       <Button label="グループを作成" onPress={() => { setGroupError(''); setSheet('group'); }} disabled={busy || loading} />
       {!loading && !groups.length && <Text style={T.sub}>グループはまだありません。いつもの友達を選んで作成できます。</Text>}
-      {groups.map(group => <View style={styles.panel} key={group.id}><View style={styles.heading}><Text style={[T.h2, styles.grow]}>{group.name}</Text><Text style={T.small}>{group.members.length}人</Text></View>{!!group.profile && <Text style={T.body}>{group.profile}</Text>}<View style={styles.members}>{group.members.map(user => <View style={styles.member} key={user.id}><Avatar user={user} /><Text style={T.small}>{user.name}</Text></View>)}</View></View>)}
+      {groups.map(group => <Pressable accessibilityRole="button" accessibilityLabel={`${group.name}を開く`} onPress={() => setEditingGroupId(group.id)} style={styles.panel} key={group.id}><View style={styles.heading}><Text style={[T.h2, styles.grow]}>{group.name}</Text><Text style={T.small}>{group.members.length}人</Text></View>{!!group.profile && <Text style={T.body}>{group.profile}</Text>}<View style={styles.members}>{group.members.map(user => <View style={styles.member} key={user.id}><Avatar user={user} /><Text style={T.small}>{user.name}</Text></View>)}</View></Pressable>)}
     </ScrollView>
+    {editingGroup && <GroupEditSheet key={editingGroup.id} group={editingGroup} me={me} friends={friends} refresh={reload} onClose={() => setEditingGroupId(null)} />}
     <Sheet visible={sheet !== null || !!remove || !!invite} onClose={close}>
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         <View style={styles.heading}><Text style={[T.h1, styles.grow]}>{remove ? '友達を削除' : invite ? '招待が届いています' : sheet === 'invite' ? '友達を招待' : 'グループを作成'}</Text><Button label="閉じる" ghost onPress={close} disabled={busy} /></View>
