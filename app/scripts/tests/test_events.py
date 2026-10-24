@@ -30,6 +30,9 @@ s, r = call('PATCH', path, {'title': 'ご飯', 'duration_min': 15}, host)
 expect('編集', s, 200); expect('編集タイトル', r['event']['title'], 'ご飯')
 expect('作成日時は変わらない', r['event']['created_at'], event['created_at'])
 expect('期限再計算', r['event']['expires_at'], event['created_at'] + 15 * 60000)
+for change in ({'title': '期限を維持'}, {'duration_min': 15}):
+    s, r = call('PATCH', path, change, host); expect('表示中の期限維持編集', s, 200)
+    expect('durationが同じなら期限維持', r['event']['expires_at'], event['created_at'] + 15 * 60000)
 s, _ = call('POST', '/friends', {'handle': user['handle']}, other)
 if s == 404:
     print('skip 友達経由の参加・取り消し（friends API 未実装）')
@@ -42,6 +45,15 @@ else:
     expect('主催者でない', r['event']['is_host'], False)
     s, r = call('GET', '/events', token=host)
     expect('満員になった募集は掲示板から消える', eid in [e['id'] for e in r['events']], False)
+    s, detail = call('GET', path, token=host)
+    closed_at = detail['event']['expires_at']
+    for change in ({'title': '終了後の編集'}, {'duration_min': 120}, {'capacity': 3}):
+        s, edited = call('PATCH', path, change, host); expect('終了後の編集成功', s, 200)
+        expect('満員終了の期限は維持', edited['event']['expires_at'], closed_at)
+        s, board = call('GET', '/events', token=host)
+        expect('編集しても満員終了は再公開しない', eid in [e['id'] for e in board['events']], False)
+        s, talks = call('GET', '/talks', token=host)
+        expect('編集しても終了トーク', next(t for t in talks['talks'] if t['event']['id'] == eid)['active'], False)
     s, _ = call('POST', path + '/join', token=other); expect('満員終了後の重複参加は不可', s, 400)
     s, _ = call('PATCH', path, {'capacity': 1}, host); expect('参加人数未満の定員不可', s, 400)
     s, r = call('DELETE', path + '/join', token=other); expect('参加取り消し', s, 200)
@@ -61,8 +73,36 @@ if db_path:
     if local_state.resolve() not in db_path.parents:
         raise RuntimeError('DBフィクスチャはこのクローンのローカルD1だけに使用できます')
     db = sqlite3.connect(str(db_path))
-    # 前半の友達経由テストで作った通知は、競合検証から分離する。
-    db.execute('DELETE FROM messages WHERE event_id = ?', (eid,)); db.commit()
+    # 自然期限切れ（期限は作成時刻＋表示時間のまま）も延長して復活させない。
+    s, expired = call('POST', '/events', payload, host); expect('自然終了用募集', s, 201)
+    expired_path = f"/events/{expired['event']['id']}"
+    expired_at = expired['event']['created_at'] - 60000
+    db.execute('UPDATE events SET created_at = ?, expires_at = ? WHERE id = ?',
+               (expired_at - 30 * 60000, expired_at, expired['event']['id'])); db.commit()
+    for change in ({'title': '自然終了後'}, {'duration_min': 120}, {'capacity': 4}):
+        s, edited = call('PATCH', expired_path, change, host); expect('自然終了後編集', s, 200)
+        expect('自然終了の期限維持', edited['event']['expires_at'], expired_at)
+        s, board = call('GET', '/events', token=host)
+        expect('自然終了を再公開しない', expired['event']['id'] in [e['id'] for e in board['events']], False)
+    s, _ = call('DELETE', expired_path, token=host); expect('自然終了用削除', s, 200)
+    # 最後の一人の参加と編集が競合しても、どちらの実行順でも終了を維持する。
+    for index in range(8):
+        s, race = call('POST', '/events', payload, host); expect('編集競合用作成', s, 201)
+        race_path = f"/events/{race['event']['id']}"
+        with ThreadPoolExecutor(max_workers=2) as pool:
+            join = pool.submit(call, 'POST', race_path + '/join', None, other)
+            edit = pool.submit(call, 'PATCH', race_path, {'duration_min': 120, 'title': '競合編集'}, host)
+            expect('編集競合の参加', join.result()[0], 200)
+            expect('編集競合の編集', edit.result()[0], 200)
+        s, talks = call('GET', '/talks', token=host)
+        expect('編集競合でも終了', next(t for t in talks['talks'] if t['event']['id'] == race['event']['id'])['active'], False)
+        s, board = call('GET', '/events', token=host)
+        expect('編集競合でも非公開', race['event']['id'] in [e['id'] for e in board['events']], False)
+        s, _ = call('DELETE', race_path, token=host); expect('編集競合用削除', s, 200)
+    # 終了募集を再利用せず、競合検証用の新しい募集を作る。
+    s, _ = call('DELETE', path, token=host); expect('前半の募集を削除', s, 200)
+    s, r = call('POST', '/events', payload, host); expect('競合用募集作成', s, 201)
+    event = r['event']; eid = event['id']; path = f'/events/{eid}'
     third, third_user = new_user('eventthird')
     cursor = db.execute('INSERT INTO groups (owner_id, name, profile, created_at) VALUES (?, ?, ?, ?)',
                         (user['id'], 'テストグループ', '', event['created_at']))
@@ -96,8 +136,10 @@ if db_path:
     expect('取り消し後人数', r['event']['count'], 1)
     s, _ = call('DELETE', path + '/join', token=winner); expect('重複取り消し', s, 200)
     expect('退会通知も1件', db.execute('SELECT body, kind FROM messages WHERE event_id = ? ORDER BY id', (eid,)).fetchall(), [(winner_user['name'] + 'が参加しました', 'system'), ('人数がそろったので募集を終了しました', 'system'), (winner_user['name'] + 'が抜けました', 'system')])
-    db.execute('UPDATE events SET expires_at = ? WHERE id = ?', (event['expires_at'], eid)); db.commit()
-    s, _ = call('POST', path + '/join', token=winner); expect('削除前に再参加', s, 200)
+    # 終了後の参加取消と編集でも再公開しない。
+    s, r = call('PATCH', path, {'duration_min': 120, 'title': '取消後の編集'}, host)
+    expect('取消後編集', s, 200)
+    s, _ = call('POST', path + '/join', token=winner); expect('取消後も再参加不可', s, 400)
     s, _ = call('DELETE', path, token=host); expect('募集削除', s, 200)
     for table in ('events', 'event_members', 'messages'):
         column = 'id' if table == 'events' else 'event_id'

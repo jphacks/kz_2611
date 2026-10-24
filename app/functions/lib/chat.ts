@@ -1,4 +1,5 @@
 import { Ctx, HttpError, Route, int, json, now, pickUser, str, userCols } from './core';
+import { EventItemRow, eventItems } from './eventItem';
 
 type Row = Record<string, unknown>;
 const participantSql = `(e.host_id = ? OR EXISTS (
@@ -16,22 +17,6 @@ async function requireParticipant(c: Ctx, eventId: number) {
   const event = await c.env.DB.prepare(`SELECT e.id AS event_id FROM events e
     WHERE e.id = ? AND ${participantSql}`).bind(eventId, c.me.id, c.me.id).first();
   if (!event) throw new HttpError(403, '参加者だけがチャットを利用できます');
-}
-
-// events.ts とは独立して、トークに必要な EventItem を組み立てる。
-async function eventItem(c: Ctx, row: Row) {
-  const { results } = await c.env.DB.prepare(`SELECT ${userCols('u', 'user_')}
-    FROM event_members em JOIN users u ON u.id = em.user_id
-    WHERE em.event_id = ? AND em.user_id != ? ORDER BY em.joined_at, u.id`)
-    .bind(row.event_id, row.host_id).all<Row>();
-  const members = results.map(r => pickUser(r, 'user_'));
-  const isHost = Number(row.host_id) === c.me.id;
-  return { id: Number(row.event_id), title: row.title, place: row.place, time_text: row.time_text,
-    capacity: Number(row.capacity), capacity_min: Number(row.capacity_min), duration_min: Number(row.duration_min),
-    expires_at: Number(row.expires_at), created_at: Number(row.created_at),
-    group_id: row.group_id == null ? null : Number(row.group_id), group_name: row.group_name,
-    host: pickUser(row, 'host_'), members, count: members.length + 1,
-    joined: isHost || members.some(u => u.id === c.me.id), is_host: isHost };
 }
 
 export const chatRoutes: Route[] = [
@@ -57,21 +42,20 @@ export const chatRoutes: Route[] = [
     return json({ message: message(row!) }, 201);
   } },
   { method: 'GET', path: /^\/talks$/, handler: async c => {
-    const { results } = await c.env.DB.prepare(`SELECT e.id AS event_id, e.host_id, e.group_id,
-      e.title, e.place, e.time_text, e.capacity, e.capacity_min, e.duration_min, e.expires_at, e.created_at,
-      g.name AS group_name, ${userCols('h', 'host_')},
-      (SELECT m.id FROM messages m WHERE m.event_id = e.id ORDER BY m.id DESC LIMIT 1) AS last_id
+    const { results } = await c.env.DB.prepare(`SELECT e.*, g.name AS group_name, ${userCols('h', 'host_')},
+      m.id AS message_id, m.event_id, m.kind, m.body, m.created_at AS message_created_at,
+      ${userCols('u', 'user_')}
       FROM events e JOIN users h ON h.id = e.host_id LEFT JOIN groups g ON g.id = e.group_id
+      LEFT JOIN messages m ON m.id = (SELECT last.id FROM messages last WHERE last.event_id = e.id ORDER BY last.id DESC LIMIT 1)
+      LEFT JOIN users u ON u.id = m.user_id
       WHERE ${participantSql}
-      ORDER BY COALESCE((SELECT m.created_at FROM messages m WHERE m.id = last_id), e.created_at) DESC,
-        COALESCE(last_id, 0) DESC, e.id DESC`).bind(c.me.id, c.me.id).all<Row>();
+      ORDER BY COALESCE(m.created_at, e.created_at) DESC, COALESCE(m.id, 0) DESC, e.id DESC`)
+      .bind(c.me.id, c.me.id).all<EventItemRow>();
     const at = now();
-    const talks = await Promise.all(results.map(async row => {
-      const lastRow = row.last_id == null ? null : await c.env.DB.prepare(`${messageSql} WHERE m.id = ?`)
-        .bind(row.last_id).first<Row>();
-      return { event: await eventItem(c, row), last: lastRow ? message(lastRow) : null,
-        active: Number(row.expires_at) > at };
-    }));
+    const events = await eventItems(c, results);
+    const talks = results.map((row, i) => ({ event: events[i],
+      last: row.message_id == null ? null : message({ ...row, created_at: row.message_created_at }),
+      active: Number(row.expires_at) > at }));
     return json({ talks });
   } },
 ];
