@@ -84,7 +84,8 @@ export function BoardScreen(p: ScreenProps) {
       void refresh().catch(() => {});
     } finally { joiningRef.current = false; if (active.current) setJoining(null); }
   }
-  const visible = events.filter(e => e.expires_at > now).sort((a, b) => a.expires_at - b.expires_at);
+  // 満員の募集は、参加していない人には表示しない（#33）。主催者・参加者には残す
+  const visible = events.filter(e => e.expires_at > now && (e.joined || e.is_host || e.count < e.capacity)).sort((a, b) => a.expires_at - b.expires_at);
   return (
     <View style={S.screen}>
       <View style={{ flex: 1, width: '100%', maxWidth: 680, alignSelf: 'center' }}>

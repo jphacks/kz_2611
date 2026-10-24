@@ -30,7 +30,8 @@ const ICON: Record<Tab, (c: string) => React.ReactNode> = {
   follow: c => <><Circle cx={9} cy={8} r={3.2} stroke={c} strokeWidth={2} fill="none" /><Circle cx={17} cy={9} r={2.4} stroke={c} strokeWidth={2} fill="none" /><Path d="M3 19 C3 14 15 14 15 19 M15 14 C19 14 21 16 21 19" stroke={c} strokeWidth={2} fill="none" /></>,
   profile: c => <><Circle cx={12} cy={8} r={3.6} stroke={c} strokeWidth={2} fill="none" /><Path d="M5 20 C5 14 19 14 19 20" stroke={c} strokeWidth={2} fill="none" /></>,
 };
-const LABEL: Record<Tab, string> = { board: '掲示板', create: '誘う', talk: 'トーク', follow: 'フォロー', profile: 'プロフィール' };
+// 並び順＝下タブの順。誘う（オレンジのボタン）を中央に置く（#39）
+const LABEL: Record<Tab, string> = { board: '掲示板', talk: 'トーク', create: '誘う', follow: 'フォロー', profile: 'プロフィール' };
 
 export function Main() {
   const [me, setMe] = useState<Me | null>(null);
