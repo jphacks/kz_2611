@@ -2,6 +2,8 @@ import { Platform } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { Main } from './src/Main';
+// ?preview=f5 のとき（Web のみ）ログインなしで出す触れるデザインプレビュー
+import { PreviewF5 } from './src/preview/f5/PreviewF5';
 
 if (Platform.OS === 'web' && typeof document !== 'undefined' && !document.getElementById('fonts')) {
   const l = document.createElement('link');
@@ -15,10 +17,15 @@ if (Platform.OS === 'web' && typeof document !== 'undefined' && !document.getEle
 }
 
 export default function App() {
+  // preview/c と同じく、Web で URL が ?preview=f5 のときだけログインなしのプレビューを出す
+  const isPreviewF5 = Platform.OS === 'web'
+    && typeof window !== 'undefined'
+    && 'f5' === new URLSearchParams(window.location.search).get('preview');
+
   return (
     <SafeAreaProvider>
       <StatusBar style="dark" />
-      <Main />
+      {isPreviewF5 ? <PreviewF5 /> : <Main />}
     </SafeAreaProvider>
   );
 }
