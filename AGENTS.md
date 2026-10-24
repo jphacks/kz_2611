@@ -82,8 +82,10 @@ npm install
 npm run db:migrate:local   # 手元DB
 npm run dev:api            # Web書き出し + API + DB を http://localhost:8788 で起動
 npm run typecheck
+npm run test:frontend      # app/src 以下の *.test.cjs / *.test.mjs を実行
 npm run test:api           # dev:api を起動した状態で。手元以外には流せない
 ```
+- テストの置き場所: 純粋関数の隣に `<名前>.test.mjs`（拡張子は .mjs または .cjs）
 - 2人で確かめるときは http://localhost:8788 と http://127.0.0.1:8788 を別々に開く
 - 他のエージェントと同時に動かすときはポートを変える（`npx wrangler pages dev dist --port 88xx`、テストは `npm run test:api -- http://localhost:88xx`）
 

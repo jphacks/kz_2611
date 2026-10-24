@@ -23,6 +23,8 @@ jobs:
         run: bash scripts/check_migrations.sh origin/main
       - name: 型チェック
         run: npm run typecheck
+      - name: フロントのテスト
+        run: npm run test:frontend
       - name: Web書き出し
         run: npm run build
       - name: 手元DBを作成
@@ -31,7 +33,8 @@ jobs:
         run: |
           npx wrangler pages dev dist --port 8788 > /tmp/wrangler.log 2>&1 &
           for i in $(seq 1 60); do curl -s localhost:8788/api/health > /dev/null && break; sleep 2; done
-          npm run test:api || (cat /tmp/wrangler.log; exit 1)
+          DB=$(find .wrangler/state/v3/d1 -name '*.sqlite' ! -name 'metadata.sqlite' | head -1)
+          KZ_EVENTS_TEST_DB="$DB" npm run test:api || (cat /tmp/wrangler.log; exit 1)
 
   # main に入ったら（= PR がマージされたら）本番 DB を更新して公開する。人もエージェントも手でデプロイしない
   deploy:
