@@ -1,16 +1,10 @@
-// ★共有: 画面上部の「日付＋大きな見出し」
+// ★共有: 画面上部の大きな見出し（日付は表示しない: #26）
 import { Text, View } from 'react-native';
 import { T } from './theme';
-const W = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
-const M = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
 export function Header({ title, right }: { title: string; right?: React.ReactNode }) {
-  const d = new Date();
   return (
-    <View style={{ paddingHorizontal: 20, paddingTop: 10, paddingBottom: 12, flexDirection: 'row', alignItems: 'flex-end' }}>
-      <View style={{ flex: 1 }}>
-        <Text style={T.date}>{`${W[d.getDay()]} · ${M[d.getMonth()]} ${d.getDate()}`}</Text>
-        <Text style={T.screenTitle}>{title}</Text>
-      </View>
+    <View style={{ paddingHorizontal: 20, paddingTop: 14, paddingBottom: 12, flexDirection: 'row', alignItems: 'flex-end' }}>
+      <Text style={[T.screenTitle, { flex: 1 }]}>{title}</Text>
       {right}
     </View>
   );
