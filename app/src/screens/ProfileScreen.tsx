@@ -8,7 +8,9 @@ import { Header } from '../ui/Header';
 import { Avatar } from '../ui/Avatar';
 import { C, S, T } from '../ui/theme';
 import { errMsg } from '../lib/util';
-import { avatarResize, jpegDataUrl, profilePatch } from '../components/profile/profile';
+import { jpegDataUrl, profilePatch } from '../components/profile/profile';
+import { PhotoCropModal } from '../components/profile/PhotoCropModal';
+import type { cropRect } from '../components/profile/crop';
 
 export function ProfileScreen(props: ScreenProps) {
   const [name, setName] = useState(props.me.name);
@@ -16,6 +18,7 @@ export function ProfileScreen(props: ScreenProps) {
   const [busy, setBusy] = useState<'image' | 'save' | 'logout' | null>(null);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
+  const [cropAsset, setCropAsset] = useState<ImagePicker.ImagePickerAsset | null>(null);
   const lock = useRef(false);
   useEffect(() => { setName(props.me.name); setAvatar(props.me.avatar); }, [props.me.name, props.me.avatar]);
   const changed = name.trim() !== props.me.name || avatar !== props.me.avatar;
@@ -32,13 +35,23 @@ export function ProfileScreen(props: ScreenProps) {
       const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], allowsMultipleSelection: false });
       if (result.canceled) return;
       const asset = result.assets[0];
-      const context = ImageManipulator.manipulate(asset.uri, { maxWidth: 256, maxHeight: 256 });
+      setCropAsset(asset);
+    } catch (e) { setError(errMsg(e)); }
+    finally { lock.current = false; setBusy(null); }
+  }
+
+  async function confirmCrop(rect: ReturnType<typeof cropRect>) {
+    if (!cropAsset || lock.current) return;
+    lock.current = true; setBusy('image'); setError('');
+    try {
+      // 元画像の座標で切り取ってから縮小する。
+      const context = ImageManipulator.manipulate(cropAsset.uri);
       try {
-        context.resize(avatarResize(asset.width, asset.height));
+        context.crop(rect).resize({ width: 256, height: 256 });
         const image = await context.renderAsync();
         try {
           const jpeg = await image.saveAsync({ format: SaveFormat.JPEG, compress: 0.75, base64: true });
-          setAvatar(jpegDataUrl(jpeg.base64));
+          setAvatar(jpegDataUrl(jpeg.base64)); setCropAsset(null);
         } finally { image.release(); }
       } finally { context.release(); }
     } catch (e) { setError(errMsg(e)); }
@@ -61,6 +74,7 @@ export function ProfileScreen(props: ScreenProps) {
 
   return (
     <View style={S.screen}>
+      {cropAsset && <PhotoCropModal asset={cropAsset} busy={busy === 'image'} error={error} onCancel={() => { setCropAsset(null); setError(''); }} onConfirm={confirmCrop} />}
       <Header title="プロフィール" />
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         <View style={styles.identity}>
