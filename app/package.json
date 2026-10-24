@@ -29,7 +29,8 @@
     "build": "expo export -p web",
     "db:migrate:local": "wrangler d1 migrations apply kz2611-db --local",
     "dev:api": "npm run build && wrangler pages dev dist --port 8788",
-    "test:api": "python3 scripts/run_tests.py"
+    "test:api": "python3 scripts/run_tests.py",
+    "test:frontend": "node scripts/run_frontend_tests.mjs"
   },
   "private": true
 }
