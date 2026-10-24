@@ -29,7 +29,8 @@ Claude Code / Codex などのAIエージェントと人間の両方が読む。�
 - 文字は Inter / Noto Sans JP（FONT）。見出しは太く大きく、数字は巨大に（例: 残り時間「あと 40 分」の40）。T（文字スタイル）と S（部品スタイル）を使う
 - 画面上部は ui/Header（日付＋大きな見出し）。タブ・選択肢は ui/Chip（四角）。シートは ui/Sheet
 - 絵文字をアイコンに使わない（アイコンは react-native-svg の線画）
-- 見本: docs/design/style12-swiss.png
+- 見本: docs/design/style12-swiss.png（候補12案は docs/design/sketch-styles-12.pdf、UIイメージは docs/design/ui-image/）
+- 元資料: docs/sources/（アイデアマップ、UI設計図、手書きUI図、説明音声の文字起こし）。始め方は CONTRIBUTING.md
 
 ## 4. ディレクトリと担当（衝突を防ぐ最重要ルール）
 ```

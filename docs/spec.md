@@ -1,7 +1,7 @@
 # 仕様書: フッ軽遊び募集アプリ（仮称）— JPHACKS 2026
 
-出典: アイデアマップ（~/Downloads/jphacks.pdf）、UI設計図（~/Downloads/jphacks (1).jpg）、手書きUI図（~/Downloads/IMG_20261024_145809554.jpg）とその説明音声（~/Downloads/New Recording 36.m4a）
-UIイメージ画像: ~/Downloads/jphacks_ui_v4/（手書きUI図と音声から作成。色・フォント・サンプルの文言や人物は仮）
+出典: アイデアマップ（docs/sources/idea-map.jpg）、UI設計図（docs/sources/ui-design.jpg）、手書きUI図（docs/sources/ui-sketch.jpg）とその説明音声の文字起こし（docs/sources/ui-sketch-audio-transcript.txt）
+UIイメージ画像: docs/design/ui-image/（手書きUI図と音声から作成。色・フォント・サンプルの文言や人物は仮）
 方針: これらに書かれている内容だけを記載する。書かれていないもの・決まっていないものは「不明」とする。
 
 ## 1. コンセプト
@@ -74,7 +74,7 @@ UIイメージ画像: ~/Downloads/jphacks_ui_v4/（手書きUI図と音声から
 不明: 起動時のログイン・登録画面、掲示板以外の画面のレイアウト・デザイン、画面間の戻り方
 
 ### 6.1 掲示板のイベントカード（手書きUI図・音声）
-初期状態では、イベントを表す四角いカードがいくつか並ぶ（イメージ: jphacks_ui_v4/01_home.png）。
+初期状態では、イベントを表す四角いカードがいくつか並ぶ（イメージ: docs/design/ui-image/01_home.png）。
 
 | 位置 | 表示するもの |
 |---|---|
