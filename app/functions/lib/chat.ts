@@ -27,7 +27,7 @@ async function eventItem(c: Ctx, row: Row) {
   const members = results.map(r => pickUser(r, 'user_'));
   const isHost = Number(row.host_id) === c.me.id;
   return { id: Number(row.event_id), title: row.title, place: row.place, time_text: row.time_text,
-    capacity: Number(row.capacity), duration_min: Number(row.duration_min),
+    capacity: Number(row.capacity), capacity_min: Number(row.capacity_min), duration_min: Number(row.duration_min),
     expires_at: Number(row.expires_at), created_at: Number(row.created_at),
     group_id: row.group_id == null ? null : Number(row.group_id), group_name: row.group_name,
     host: pickUser(row, 'host_'), members, count: members.length + 1,
@@ -58,7 +58,7 @@ export const chatRoutes: Route[] = [
   } },
   { method: 'GET', path: /^\/talks$/, handler: async c => {
     const { results } = await c.env.DB.prepare(`SELECT e.id AS event_id, e.host_id, e.group_id,
-      e.title, e.place, e.time_text, e.capacity, e.duration_min, e.expires_at, e.created_at,
+      e.title, e.place, e.time_text, e.capacity, e.capacity_min, e.duration_min, e.expires_at, e.created_at,
       g.name AS group_name, ${userCols('h', 'host_')},
       (SELECT m.id FROM messages m WHERE m.event_id = e.id ORDER BY m.id DESC LIMIT 1) AS last_id
       FROM events e JOIN users h ON h.id = e.host_id LEFT JOIN groups g ON g.id = e.group_id
