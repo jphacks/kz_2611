@@ -23,7 +23,12 @@ export const profileRoutes: Route[] = [
   { method: 'GET', path: /^\/users\/(\d+)$/, handler: async ({ env, me, params }) => {
     const id = int(params[0], 'ユーザーID', 1, Number.MAX_SAFE_INTEGER);
     const friend = await isFriend(env, me.id, id);
-    if (id !== me.id && !friend) throw new HttpError(404, 'ユーザーが見つかりません');
+    // 主催者も参加者として扱う。閲覧だけできる人には公開しない。
+    const sharedEvent = id !== me.id && !friend && await env.DB.prepare(`SELECT 1 FROM events e
+      WHERE (e.host_id = ? OR EXISTS (SELECT 1 FROM event_members m WHERE m.event_id = e.id AND m.user_id = ?))
+        AND (e.host_id = ? OR EXISTS (SELECT 1 FROM event_members m WHERE m.event_id = e.id AND m.user_id = ?))
+      LIMIT 1`).bind(me.id, me.id, id, id).first();
+    if (id !== me.id && !friend && !sharedEvent) throw new HttpError(404, 'ユーザーが見つかりません');
     const user = await env.DB.prepare(`SELECT ${PUBLIC_USER} FROM users WHERE id = ?`).bind(id).first<User>();
     if (!user) throw new HttpError(404, 'ユーザーが見つかりません');
     return json({ user, is_friend: friend });
