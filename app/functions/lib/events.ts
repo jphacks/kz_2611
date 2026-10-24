@@ -91,7 +91,7 @@ export const eventRoutes: Route[] = [
     const e = await find(c), at = now();
     if (e.expires_at <= at) throw new HttpError(400, '募集は終了しています');
     if (e.host_id === c.me.id) return json({ event: await item(c, e.id) });
-    // 定員確認と参加登録を同じSQLで行う。直後の changes() で通知の重複を防ぐ。
+    // 参加・通知・満員終了を同じトランザクションで行い、直前の changes() で重複を防ぐ。
     await c.env.DB.batch([
       c.env.DB.prepare(`INSERT OR IGNORE INTO event_members (event_id, user_id, joined_at)
         SELECT id, ?, ? FROM events e WHERE id = ? AND ${visibleSql(c.me.id)}
@@ -99,6 +99,12 @@ export const eventRoutes: Route[] = [
         .bind(c.me.id, at, e.id, e.id, at),
       c.env.DB.prepare(`INSERT INTO messages (event_id, user_id, kind, body, created_at)
         SELECT ?, ?, 'system', ?, ? WHERE changes() > 0`).bind(e.id, c.me.id, `${c.me.name}が参加しました`, at),
+      c.env.DB.prepare(`UPDATE events SET expires_at = ? WHERE id = ? AND changes() > 0
+        AND expires_at > ? AND (SELECT COUNT(*) FROM event_members WHERE event_id = ?) + 1 = capacity`)
+        .bind(at, e.id, at, e.id),
+      c.env.DB.prepare(`INSERT INTO messages (event_id, user_id, kind, body, created_at)
+        SELECT ?, ?, 'system', ?, ? WHERE changes() > 0`)
+        .bind(e.id, c.me.id, '人数がそろったので募集を終了しました', at),
     ]);
     const event = await item(c, e.id);
     if (!event.joined) throw new HttpError(400, '定員に達しているか、募集が終了しています');
