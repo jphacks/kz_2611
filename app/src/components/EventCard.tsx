@@ -113,7 +113,7 @@ export function EventCard({ event, now, onOpen, onJoin, onLeave, onDelete, onPre
       <View pointerEvents="none" style={StyleSheet.absoluteFill}>
         <Svg width="100%" height="100%">
           <Rect x={sw / 2} y={sw / 2} width={w} height={h} rx={r} ry={r} fill="none" stroke="rgba(0,0,0,0.10)" strokeWidth={sw} />
-          {!!gauge && <Path d={gauge} fill="none" stroke={soon ? C.yellow : C.white} strokeWidth={sw} strokeLinecap="round" strokeDasharray={`${perimeter * fraction} ${perimeter}`} strokeDashoffset={-perimeter * (1 - fraction)} />}
+          {!!gauge && <Path d={gauge} fill="none" stroke={soon ? C.yellow : C.ink} strokeWidth={sw} strokeLinecap="round" strokeDasharray={`${perimeter * fraction} ${perimeter}`} strokeDashoffset={-perimeter * (1 - fraction)} />}
         </Svg>
       </View>
       <Animated.View style={[styles.left, { transform: [{ translateX: offset }], zIndex: 1 }]}>
