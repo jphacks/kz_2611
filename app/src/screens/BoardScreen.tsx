@@ -116,7 +116,7 @@ export function BoardScreen(p: ScreenProps) {
   return (
     <View style={S.screen}>
       <View style={{ flex: 1, width: '100%', maxWidth: 680, alignSelf: 'center' }}>
-        <Header title="掲示板" />
+        <Header title="このゆびとまれ" />
         <View><ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 12, gap: 8 }}>
           <Chip label="全体" on={group === 'all'} onPress={() => select('all')} />
           {groups.map(g => <Chip key={g.id} label={g.name} on={group === String(g.id)} onPress={() => select(String(g.id))} />)}
