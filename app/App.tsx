@@ -2,7 +2,7 @@ import { Platform } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { Main } from './src/Main';
-
+import { PreviewF1 } from './src/preview/f1/PreviewF1';
 if (Platform.OS === 'web' && typeof document !== 'undefined' && !document.getElementById('fonts')) {
   const l = document.createElement('link');
   l.id = 'fonts'; l.rel = 'stylesheet';
@@ -15,6 +15,14 @@ if (Platform.OS === 'web' && typeof document !== 'undefined' && !document.getEle
 }
 
 export default function App() {
+  if (Platform.OS === 'web' && typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('preview') === 'f1') {
+    return (
+      <SafeAreaProvider>
+        <StatusBar style="dark" />
+        <PreviewF1 />
+      </SafeAreaProvider>
+    );
+  }
   return (
     <SafeAreaProvider>
       <StatusBar style="dark" />
