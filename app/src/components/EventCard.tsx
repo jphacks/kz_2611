@@ -21,6 +21,7 @@ export interface EventCardProps {
 export function EventCard({ event, now, onOpen, onJoin, onLeave, onDelete, onPressMembers, joining = false, leaving = false, deleting = false }: EventCardProps) {
   const [size, setSize] = useState({ width: 0, height: 0 });
   const offset = useRef(new Animated.Value(0)).current;
+  const wobble = useRef(new Animated.Value(0)).current;
   const dragged = useRef(false);
   const dragging = useRef(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -41,6 +42,21 @@ export function EventCard({ event, now, onOpen, onJoin, onLeave, onDelete, onPre
     if (deleting) setConfirmDelete(false);
     if (!dragging.current) settle(swapped);
   }, [swapped, travel, event, deleting]);
+  // 参加できるカードのアイコンをゆらゆらさせて、スワイプで参加できることを伝える。
+  // 左へ戻る（取り消し方向）は速く、右へ行く（参加方向）は遅く動く非対称の揺れ。
+  useEffect(() => {
+    if (!canJoin) { wobble.setValue(0); return; }
+    if (typeof Animated.loop !== 'function' || typeof Animated.sequence !== 'function') {
+      wobble.setValue(0);
+      return;
+    }
+    const loop = Animated.loop(Animated.sequence([
+      Animated.timing(wobble, { toValue: 1, duration: 900, useNativeDriver: true }),
+      Animated.timing(wobble, { toValue: 0, duration: 250, useNativeDriver: true }),
+    ]));
+    loop.start();
+    return () => { loop.stop(); wobble.setValue(0); };
+  }, [canJoin]);
   const responder = useRef(PanResponder.create({
     // アイコン上の操作だけを受け取り、縦方向はスクロールへ譲る。
     onStartShouldSetPanResponder: () => latest.current.canJoin || latest.current.canLeave || latest.current.canDelete,
@@ -102,13 +118,13 @@ export function EventCard({ event, now, onOpen, onJoin, onLeave, onDelete, onPre
       </View>
       <Animated.View style={[styles.left, { transform: [{ translateX: offset }], zIndex: 1 }]}>
         <View {...responder.panHandlers} style={Platform.OS === 'web' ? { touchAction: 'pan-y' } as ViewStyle : undefined} accessibilityLabel={`${event.host.name}のアイコン。${canJoin ? '右へスワイプで参加' : canLeave ? '左へスワイプで参加を取り消す' : canDelete ? '左へスワイプで掲示を取り消す' : status}`}>
-          <View style={styles.host}>
+          <Animated.View style={[styles.host, { transform: [{ translateX: wobble.interpolate({ inputRange: [0, 1], outputRange: [0, 14] }) }] }]}>
             <Svg width={100} height={100} style={StyleSheet.absoluteFill} viewBox="0 0 100 100">
               <Circle cx={50} cy={50} r={ringR} fill="none" stroke="rgba(255,255,255,0.18)" strokeWidth={8} />
               <Path d="M 50 6 A 44 44 0 0 1 50 94 A 44 44 0 0 1 50 6" fill="none" stroke={C.white} strokeWidth={8} strokeLinecap="round" strokeDasharray={`${ring * Math.min(1, event.count / event.capacity)} ${ring}`} />
             </Svg>
             <Avatar user={event.host} size={76} />
-          </View>
+          </Animated.View>
         </View>
         <Text numberOfLines={1} style={styles.hostName}>{event.host.name}</Text>
       </Animated.View>
