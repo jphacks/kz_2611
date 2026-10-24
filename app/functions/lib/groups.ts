@@ -44,6 +44,44 @@ export const groupRoutes: Route[] = [
     const id = (results[0] as { meta: { last_row_id: number } }).meta.last_row_id;
     return json({ group: await withMembers(env, { id, name, profile, owner_id: me.id }) }, 201);
   } },
+  { method: 'PATCH', path: /^\/groups\/(\d+)$/, handler: async ({ env, me, params, body }) => {
+    const id = int(params[0], 'グループID', 1, Number.MAX_SAFE_INTEGER);
+    const group = await env.DB.prepare('SELECT id, name, profile, owner_id FROM groups WHERE id = ?').bind(id).first<Group>();
+    if (!group) throw new HttpError(404, 'グループが見つかりません');
+    if (group.owner_id !== me.id) throw new HttpError(403, '作成者だけが編集できます');
+    const b = await body();
+    const name = b.name === undefined ? group.name : str(b.name, 'グループ名', 1, 20);
+    const profile = b.profile === undefined ? group.profile : str(b.profile, 'プロフィール', 0, 100);
+    await env.DB.prepare('UPDATE groups SET name = ?, profile = ? WHERE id = ? AND owner_id = ?').bind(name, profile, id, me.id).run();
+    return json({ group: await withMembers(env, { ...group, name, profile }) });
+  } },
+  { method: 'POST', path: /^\/groups\/(\d+)\/members$/, handler: async ({ env, me, params, body }) => {
+    const id = int(params[0], 'グループID', 1, Number.MAX_SAFE_INTEGER);
+    const group = await env.DB.prepare('SELECT id, name, profile, owner_id FROM groups WHERE id = ?').bind(id).first<Group>();
+    if (!group) throw new HttpError(404, 'グループが見つかりません');
+    if (group.owner_id !== me.id) throw new HttpError(403, '作成者だけが追加できます');
+    const b = await body();
+    if (typeof b.user_id !== 'number') throw new HttpError(400, 'メンバーIDは整数で指定してください');
+    const userId = int(b.user_id, 'メンバーID', 1, Number.MAX_SAFE_INTEGER);
+    if (!(await isFriend(env, me.id, userId))) throw new HttpError(400, 'メンバーには自分の友達だけを指定してください');
+    await env.DB.prepare('INSERT OR IGNORE INTO group_members (group_id, user_id) SELECT id, ? FROM groups WHERE id = ? AND owner_id = ?').bind(userId, id, me.id).run();
+    return json({ group: await withMembers(env, group) });
+  } },
+  { method: 'DELETE', path: /^\/groups\/(\d+)\/members\/(\d+)$/, handler: async ({ env, me, params }) => {
+    const id = int(params[0], 'グループID', 1, Number.MAX_SAFE_INTEGER);
+    const userId = int(params[1], 'メンバーID', 1, Number.MAX_SAFE_INTEGER);
+    const group = await env.DB.prepare('SELECT owner_id FROM groups WHERE id = ?').bind(id).first<{ owner_id: number }>();
+    if (!group) throw new HttpError(404, 'グループが見つかりません');
+    if (me.id !== userId && group.owner_id !== me.id) throw new HttpError(403, '作成者だけが他のメンバーを削除できます');
+    // 退会・引き継ぎ・空グループ削除を同じトランザクションで行う。
+    // 参加時刻がないため、残った最小のuser_idへ引き継ぐ。募集・参加者は残す。
+    await env.DB.batch([
+      env.DB.prepare('DELETE FROM group_members WHERE group_id = ? AND user_id = ? AND (user_id = ? OR EXISTS (SELECT 1 FROM groups WHERE id = ? AND owner_id = ?))').bind(id, userId, me.id, id, me.id),
+      env.DB.prepare('UPDATE groups SET owner_id = (SELECT MIN(user_id) FROM group_members WHERE group_id = ?) WHERE id = ? AND NOT EXISTS (SELECT 1 FROM group_members WHERE group_id = ? AND user_id = groups.owner_id) AND EXISTS (SELECT 1 FROM group_members WHERE group_id = ?)').bind(id, id, id, id),
+      env.DB.prepare('DELETE FROM groups WHERE id = ? AND NOT EXISTS (SELECT 1 FROM group_members WHERE group_id = ?)').bind(id, id),
+    ]);
+    return json({ ok: true });
+  } },
   { method: 'DELETE', path: /^\/groups\/(\d+)$/, handler: async ({ env, me, params }) => {
     const id = int(params[0], 'グループID', 1, Number.MAX_SAFE_INTEGER);
     const group = await env.DB.prepare('SELECT owner_id FROM groups WHERE id = ?').bind(id).first<{ owner_id: number }>();

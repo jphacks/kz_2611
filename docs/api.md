@@ -25,6 +25,9 @@
 ## グループ（担当: functions/lib/groups.ts）
 | GET | /groups | — | { groups: Group[] }（自分がメンバーのもの） |
 | POST | /groups | name(1-20), profile(0-100), member_ids:number[]（自分の友達だけ） | 201 { group: Group } |
+| PATCH | /groups/:id | name?(1-20), profile?(0-100) | { group: Group }（作成者だけ、他は403。存在しない→404） |
+| POST | /groups/:id/members | user_id:number（整数、自分の友達だけ） | { group: Group }（作成者だけ→403、友達以外→400、重複追加は冪等） |
+| DELETE | /groups/:id/members/:userId | — | { ok }（作成者は他人を削除可、本人は退会可。他人による削除→403。作成者退会時は最小user_idへ引継ぎ、最後の1人はグループ削除。募集と参加者は残す） |
 | DELETE | /groups/:id | — | { ok }（作成者だけ） |
 
 ## 募集（担当: functions/lib/events.ts）
