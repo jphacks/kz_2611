@@ -2,6 +2,7 @@ import { Platform } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { Main } from './src/Main';
+import { PreviewF4, isPreviewF4 } from './src/preview/f4/PreviewF4';
 
 if (Platform.OS === 'web' && typeof document !== 'undefined' && !document.getElementById('fonts')) {
   const l = document.createElement('link');
@@ -15,6 +16,8 @@ if (Platform.OS === 'web' && typeof document !== 'undefined' && !document.getEle
 }
 
 export default function App() {
+  // Web のみ: ?preview=f4 はデザイン案の触れるプレビュー（f4）をログインなしで出す
+  if (isPreviewF4()) return <PreviewF4 />;
   return (
     <SafeAreaProvider>
       <StatusBar style="dark" />
