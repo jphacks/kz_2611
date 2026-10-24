@@ -6,6 +6,7 @@ import { Avatar } from '../ui/Avatar';
 import { Sheet } from '../ui/Sheet';
 import { C, S, T } from '../ui/theme';
 import { useSocialData } from '../hooks/useSocialData';
+import { useFriendRequests } from '../hooks/useFriendRequests';
 import { errMsg } from '../lib/util';
 import { GroupEditSheet } from '../components/follow/GroupEditSheet';
 import { InviteQr } from '../components/follow/InviteQr';
@@ -18,6 +19,7 @@ function Button({ label, onPress, disabled = false, ghost = false }: { label: st
 
 export function FollowScreen({ me }: ScreenProps) {
   const { friends, groups, loading, error: socialError, refresh: reload } = useSocialData(me);
+  const { received, sent, error: requestError, refresh: reloadRequests } = useFriendRequests();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
@@ -55,12 +57,23 @@ export function FollowScreen({ me }: ScreenProps) {
     if (busy) return;
     setBusy(true); setError(''); setNotice('');
     try {
-      const { friend } = await api<{ friend: User }>('/friends', { body });
-      await reload();
+      const result = await api<{ status?: 'requested' | 'friends'; friend?: User }>('/friends', { body });
+      await Promise.all([reload(), reloadRequests()]);
       setHandle(''); setInvite(null);
       if ('invite_code' in body) clearInvite();
-      setNotice(`${friend.name}さんと友達になりました`);
+      // IDでの追加は申請。相手からも申請が届いていたときだけすぐ友達になる
+      setNotice(result.friend ? `${result.friend.name}さんと友達になりました` : 'handle' in body ? `@${body.handle}さんに友達申請しました。承認されると友達になります` : '');
     } catch (e) { setError(errMsg(e)); } finally { setBusy(false); }
+  }
+  async function respond(user: User, action: 'accept' | 'reject' | 'cancel') {
+    if (busy) return;
+    setBusy(true); setError(''); setNotice('');
+    try {
+      if (action === 'accept') await api('/friend-requests/' + user.id + '/accept', { method: 'POST' });
+      else await api('/friend-requests/' + user.id, { method: 'DELETE' });
+      await Promise.all([reload(), reloadRequests()]);
+      setNotice(action === 'accept' ? `${user.name}さんと友達になりました` : action === 'reject' ? `${user.name}さんの申請を断りました` : `${user.name}さんへの申請を取り消しました`);
+    } catch (e) { setError(errMsg(e)); void reloadRequests(); } finally { setBusy(false); }
   }
   async function deleteFriend() {
     if (!remove || busy) return;
@@ -86,11 +99,22 @@ export function FollowScreen({ me }: ScreenProps) {
   return <View style={S.screen}>
     <Header title="フォロー" />
     <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-      {!!(error || socialError) && <View accessibilityRole="alert" style={styles.panel}><Text style={S.error}>{error || socialError}</Text><Button label="再読み込み" ghost onPress={() => { setError(''); void reload(); }} disabled={busy || loading} /></View>}
+      {!!(error || socialError || requestError) && <View accessibilityRole="alert" style={styles.panel}><Text style={S.error}>{error || socialError || requestError}</Text><Button label="再読み込み" ghost onPress={() => { setError(''); void reload(); void reloadRequests(); }} disabled={busy || loading} /></View>}
       {!!notice && <Text accessibilityLiveRegion="polite" style={T.body}>{notice}</Text>}
+      {!!received.length && <View style={styles.panel}>
+        <Text style={T.h2}>届いた友達申請 · {received.length}</Text>
+        {received.map(user => <View key={user.id} style={styles.request}>
+          <View style={styles.requestUser}><Avatar user={user} size={44} /><View style={styles.grow}><Text style={T.h2}>{user.name}</Text><Text style={T.sub}>@{user.handle}</Text></View></View>
+          <View style={styles.requestActions}><View style={styles.grow}><Button label="承認する" disabled={busy} onPress={() => void respond(user, 'accept')} /></View><View style={styles.grow}><Button label="拒否する" ghost disabled={busy} onPress={() => void respond(user, 'reject')} /></View></View>
+        </View>)}
+      </View>}
+      {!!sent.length && <View style={styles.panel}>
+        <Text style={T.h2}>送った友達申請 · {sent.length}</Text>
+        {sent.map(user => <View key={user.id} style={styles.requestUser}><Avatar user={user} size={44} /><View style={styles.grow}><Text style={T.h2}>{user.name}</Text><Text style={T.sub}>@{user.handle} · 申請中</Text></View><Button label="取り消す" ghost disabled={busy} onPress={() => void respond(user, 'cancel')} /></View>)}
+      </View>}
       <View style={styles.heading}><Text style={T.h2}>友達</Text><Text style={T.huge}>{friends.length}</Text></View>
       <View style={styles.panel}>
-        <Text style={T.h2}>友達を追加</Text><Text style={T.sub}>IDを入力すると、お互いに友達になります。</Text>
+        <Text style={T.h2}>友達を追加</Text><Text style={T.sub}>IDを入力すると友達申請を送ります。相手が承認すると友達になります。</Text>
         <TextInput accessibilityLabel="友達のID" placeholder="友達のID（例: taro）" autoCapitalize="none" autoCorrect={false} value={handle} onChangeText={setHandle} style={S.input} editable={!busy} onSubmitEditing={() => { if (handle.trim()) void addFriend({ handle: handle.trim() }); }} />
         <Button label="IDで追加" disabled={busy || !handle.trim()} onPress={() => void addFriend({ handle: handle.trim() })} />
         <Button label="招待リンク・QRを表示" ghost onPress={() => setSheet('invite')} disabled={busy} />
@@ -125,5 +149,6 @@ const styles = StyleSheet.create({
   panel: { padding: 18, backgroundColor: C.white, borderRadius: 22, borderWidth: 1.5, borderColor: C.line, gap: 12 },
   row: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: C.line },
   grow: { flex: 1 }, delete: { padding: 12 },
+  request: { gap: 10 }, requestUser: { flexDirection: 'row', alignItems: 'center', gap: 12 }, requestActions: { flexDirection: 'row', gap: 8 },
   members: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 }, member: { alignItems: 'center', gap: 4 },
 });

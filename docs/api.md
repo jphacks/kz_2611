@@ -14,13 +14,16 @@
 
 ## プロフィール（担当: functions/lib/profile.ts）
 | PATCH | /me | name?, avatar?（data URL, 200KB以内, null で削除） | { user: Me } |
-| GET | /users/:id | — | { user: User, is_friend } 友達・本人・同じイベントの参加者どうし（主催者含む）だけ。それ以外は 404 |
+| GET | /users/:id | — | { user: User, is_friend, request } 友達・本人・同じイベントの参加者どうし（主催者含む）だけ。それ以外は 404（申請中でも見えない）。request は友達申請の状態 `none`（なし・友達・本人）/ `sent`（自分が申請中）/ `received`（相手から届いている） |
 
 ## 友達（担当: functions/lib/friends.ts）
 | GET | /friends | — | { friends: User[] }（名前順） |
-| POST | /friends | handle または invite_code | { friend: User }（相互・即時。自分自身・存在しない→400/404、既に友達→200） |
+| POST | /friends | handle または invite_code | handle: { status: "requested" } または { status: "friends", friend: User }（#77 申請。相手からの申請が届いていればすぐ友達。既に友達→200 friends。申請済みでも200 requested）。invite_code: { friend: User }（status は付かない。相互・即時。既に友達→200。2人の間の申請は消える）。自分自身・存在しない→400/404 |
 | DELETE | /friends/:id | — | { ok } |
 | GET | /invite/:code | — | { user: User }（招待リンクを開いたときの確認用。ログイン必要） |
+| GET | /friend-requests | — | { received: User[], sent: User[] }（届いた申請・送った申請。新しい順） |
+| POST | /friend-requests/:userId/accept | — | { status: "friends", friend: User }（:userId から届いた申請を承認し相互に友達になる。申請が無い→404、既に友達→200、自分→400） |
+| DELETE | /friend-requests/:userId | — | { ok }（届いた申請の拒否・送った申請の取り消し。無くても200） |
 
 ## グループ（担当: functions/lib/groups.ts）
 | GET | /groups | — | { groups: Group[] }（自分がメンバーのもの） |

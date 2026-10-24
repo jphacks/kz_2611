@@ -31,6 +31,10 @@ export const profileRoutes: Route[] = [
     if (id !== me.id && !friend && !sharedEvent) throw new HttpError(404, 'ユーザーが見つかりません');
     const user = await env.DB.prepare(`SELECT ${PUBLIC_USER} FROM users WHERE id = ?`).bind(id).first<User>();
     if (!user) throw new HttpError(404, 'ユーザーが見つかりません');
-    return json({ user, is_friend: friend });
+    // 友達申請の状態: none / sent（自分が申請中）/ received（相手から届いている）
+    const pending = id === me.id || friend ? null : await env.DB.prepare('SELECT from_id FROM friend_requests WHERE (from_id = ? AND to_id = ?) OR (from_id = ? AND to_id = ?) ORDER BY created_at LIMIT 1')
+      .bind(me.id, id, id, me.id).first<{ from_id: number }>();
+    const request = !pending ? 'none' : pending.from_id === me.id ? 'sent' : 'received';
+    return json({ user, is_friend: friend, request });
   } },
 ];

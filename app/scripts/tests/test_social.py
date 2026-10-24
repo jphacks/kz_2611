@@ -14,9 +14,11 @@ def public(user):
 a, alice = new_user('socA')
 b, bob = new_user('socB')
 request('GET', '/friends', status=401)
-request('POST', '/friends', a, {'handle': bob['handle']})
+expect('IDは申請', request('POST', '/friends', a, {'handle': bob['handle']}), {'status': 'requested'})
+expect('承認前は友達でない', request('GET', '/friends', b)['friends'], [])
+request('POST', f"/friend-requests/{alice['id']}/accept", b)
 friends = request('GET', '/friends', b)['friends']
-expect('相互即時', [u['id'] for u in friends], [alice['id']])
+expect('承認で相互', [u['id'] for u in friends], [alice['id']])
 public(friends[0])
 request('POST', '/friends', b, {'invite_code': alice['invite_code']})
 expect('重複なし', len(request('GET', '/friends', a)['friends']), 1)

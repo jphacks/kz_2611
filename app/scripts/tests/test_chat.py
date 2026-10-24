@@ -1,5 +1,5 @@
 import sys
-from lib import call, expect, new_user
+from lib import call, expect, new_user, make_friends
 
 for method, path in [('GET', '/talks'), ('GET', '/events/1/messages'), ('POST', '/events/1/messages')]:
     status, _ = call(method, path)
@@ -28,7 +28,7 @@ request('POST', path, outsider, {'body': '読めない'}, status=403)
 request('GET', '/events/999999999/messages', status=403)
 expect('第三者のトークは空', request('GET', '/talks', outsider)['talks'], [])
 # 全体募集への参加に必要な友達関係も API で準備する。
-request('POST', '/friends', member, {'handle': hu['handle']})
+make_friends(member, mu, host, hu)
 request('POST', f'/events/{eid}/join', member)
 messages = request('GET', path, member)['messages']
 expect('参加システムメッセージ', any(m['kind'] == 'system' and '参加しました' in m['body'] for m in messages), True)
