@@ -26,6 +26,7 @@ function setup(invite = null) {
     '../hooks/useSocialData': { useSocialData: () => ({ friends: social.friends, groups: [], loading: false, error: '', refresh: async () => { social.refreshes++; } }) },
     '../hooks/useFriendRequests': { useFriendRequests },
     '../lib/util': util,
+    '../components/follow/GroupEditSheet': { GroupEditSheet: () => null },
     '../components/follow/InviteQr': { InviteQr: () => null },
     '../components/follow/invite': { inviteFromUrl: () => invite, inviteLink: code => 'https://example.com/?invite=' + code },
   }, { URL, window: { location: { href: 'https://example.com/?invite=' + invite }, history: { state: null, replaceState: (_, __, url) => replaced.push(url) } } });
