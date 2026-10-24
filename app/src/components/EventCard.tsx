@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Animated, PanResponder, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Animated, PanResponder, Platform, Pressable, StyleSheet, Text, View, type ViewStyle } from 'react-native';
 import Svg, { Circle, Path, Rect } from 'react-native-svg';
 import type { EventItem } from '../api';
 import { Avatar } from '../ui/Avatar';
@@ -10,21 +10,24 @@ export interface EventCardProps {
   now: number;
   onOpen: () => void;
   onJoin: () => void;
+  onLeave: () => void;
   onPressMembers: () => void;
   joining?: boolean;
+  leaving?: boolean;
 }
 
-export function EventCard({ event, now, onOpen, onJoin, onPressMembers, joining = false }: EventCardProps) {
+export function EventCard({ event, now, onOpen, onJoin, onLeave, onPressMembers, joining = false, leaving = false }: EventCardProps) {
   const [size, setSize] = useState({ width: 0, height: 0 });
   const offset = useRef(new Animated.Value(0)).current;
   const dragged = useRef(false);
   const dragging = useRef(false);
-  const swapped = !event.is_host && (event.joined || joining);
+  const swapped = !event.is_host && !leaving && (event.joined || joining);
   const travel = Math.max(0, size.width - 40 - 100);
   const swap = useRef(new Animated.Value(swapped ? 1 : 0)).current;
-  const canJoin = !event.joined && !event.is_host && !joining && travel > 0 && event.count < event.capacity && event.expires_at > now;
-  const latest = useRef({ canJoin, onJoin, onOpen, travel, swapped });
-  latest.current = { canJoin, onJoin, onOpen, travel, swapped };
+  const canJoin = !event.joined && !event.is_host && !joining && !leaving && travel > 0 && event.count < event.capacity && event.expires_at > now;
+  const canLeave = event.joined && !event.is_host && !joining && !leaving && travel > 0 && event.expires_at > now;
+  const latest = useRef({ canJoin, canLeave, onJoin, onLeave, onOpen, travel, swapped });
+  latest.current = { canJoin, canLeave, onJoin, onLeave, onOpen, travel, swapped };
   const settle = (right: boolean) => {
     Animated.spring(offset, { toValue: right ? latest.current.travel : 0, useNativeDriver: false, overshootClamping: true }).start();
     Animated.timing(swap, { toValue: right ? 1 : 0, duration: 240, useNativeDriver: false }).start();
@@ -34,18 +37,22 @@ export function EventCard({ event, now, onOpen, onJoin, onPressMembers, joining 
     if (!dragging.current) settle(swapped);
   }, [swapped, travel, event]);
   const responder = useRef(PanResponder.create({
-    onStartShouldSetPanResponder: () => latest.current.canJoin,
-    onMoveShouldSetPanResponder: (_, g) => latest.current.canJoin && g.dx > 8 && Math.abs(g.dx) > Math.abs(g.dy) * 1.5,
+    // アイコン上の操作だけを受け取り、縦方向はスクロールへ譲る。
+    onStartShouldSetPanResponder: () => latest.current.canJoin || latest.current.canLeave,
+    onMoveShouldSetPanResponderCapture: (_, g) => ((latest.current.canJoin && g.dx > 8) || (latest.current.canLeave && g.dx < -8)) && Math.abs(g.dx) > Math.abs(g.dy) * 1.5,
+    onMoveShouldSetPanResponder: (_, g) => ((latest.current.canJoin && g.dx > 8) || (latest.current.canLeave && g.dx < -8)) && Math.abs(g.dx) > Math.abs(g.dy) * 1.5,
     onPanResponderGrant: () => { dragged.current = true; dragging.current = true; offset.stopAnimation(); },
-    onPanResponderMove: (_, g) => offset.setValue(Math.max(0, Math.min(g.dx, latest.current.travel))),
+    onPanResponderMove: (_, g) => offset.setValue(Math.max(0, Math.min((latest.current.canLeave ? latest.current.travel : 0) + g.dx, latest.current.travel))),
     onPanResponderRelease: (_, g) => {
       dragging.current = false;
-      const join = g.dx > latest.current.travel / 2 && Math.abs(g.dx) > Math.abs(g.dy) * 1.5 && latest.current.canJoin;
-      settle(join || latest.current.swapped);
-      if (join) {
-        latest.current.onJoin();
-        // joining を返さない親でも、次の描画で参加結果に合わせる。
-        requestAnimationFrame(() => { if (!latest.current.swapped) settle(false); });
+      const horizontal = Math.abs(g.dx) > Math.abs(g.dy) * 1.5;
+      const join = g.dx > latest.current.travel / 2 && horizontal && latest.current.canJoin;
+      const leave = -g.dx > latest.current.travel / 2 && horizontal && latest.current.canLeave;
+      settle(leave ? false : join || latest.current.swapped);
+      if (join || leave) {
+        if (leave) latest.current.onLeave(); else latest.current.onJoin();
+        // 親から返る処理中・結果の props を正とする。
+        requestAnimationFrame(() => settle(latest.current.swapped));
       } else if (Math.abs(g.dx) < 8 && Math.abs(g.dy) < 8) latest.current.onOpen();
       // スワイプ直後にカードのタップとして扱わない。
       setTimeout(() => { dragged.current = false; }, 200);
@@ -71,7 +78,7 @@ export function EventCard({ event, now, onOpen, onJoin, onPressMembers, joining 
   const minimum = event.capacity_min;
   const capacity = minimum && minimum !== event.capacity ? `${minimum}〜${event.capacity}` : `${event.capacity}`;
   const mins = Math.ceil(remaining / 60_000);
-  const status = joining ? '参加中…' : event.is_host ? '主催' : event.joined ? '参加中' : event.count >= event.capacity ? '満員' : remaining === 0 ? '終了' : '';
+  const status = leaving ? '取り消し中…' : joining ? '参加中…' : event.is_host ? '主催' : event.joined ? '参加中' : event.count >= event.capacity ? '満員' : remaining === 0 ? '終了' : '';
   return (
     <Pressable accessibilityRole="button" accessibilityLabel={`${event.title}、${event.count} / ${capacity}人、あと${mins}分。チャットを開く`}
       onPress={() => { if (!dragged.current) onOpen(); }}
@@ -87,7 +94,7 @@ export function EventCard({ event, now, onOpen, onJoin, onPressMembers, joining 
         </Svg>
       </View>
       <Animated.View style={[styles.left, { transform: [{ translateX: offset }], zIndex: 1 }]}>
-        <View {...responder.panHandlers} accessibilityLabel={`${event.host.name}のアイコン。${canJoin ? '右へスワイプで参加' : status}`}>
+        <View {...responder.panHandlers} style={Platform.OS === 'web' ? { touchAction: 'pan-y' } as ViewStyle : undefined} accessibilityLabel={`${event.host.name}のアイコン。${canJoin ? '右へスワイプで参加' : canLeave ? '左へスワイプで参加を取り消す' : status}`}>
           <View style={styles.host}>
             <Svg width={100} height={100} style={StyleSheet.absoluteFill} viewBox="0 0 100 100">
               <Circle cx={50} cy={50} r={ringR} fill="none" stroke="rgba(0,0,0,0.18)" strokeWidth={8} />
@@ -109,7 +116,6 @@ export function EventCard({ event, now, onOpen, onJoin, onPressMembers, joining 
         </Pressable>
       </Animated.View>
       {!!status && <View style={styles.status}><Text style={styles.statusText}>{status}</Text></View>}
-      {canJoin && <Text style={styles.hint}>→ スワイプで参加</Text>}
       <View style={[styles.badge, soon && { backgroundColor: C.yellow }]}>
         <Svg width={12} height={12} viewBox="0 0 24 24"><Circle cx={12} cy={12} r={9} stroke={soon ? C.ink : C.white} strokeWidth={2.5} fill="none" /><Path d="M12 7 V12 L15 14" stroke={soon ? C.ink : C.white} strokeWidth={2.5} fill="none" /></Svg>
         <Text style={[styles.badgeText, soon && { color: C.ink }]}>あと{mins}分</Text>
@@ -133,5 +139,4 @@ const styles = StyleSheet.create({
   badgeText: { fontFamily: FONT, color: C.white, fontWeight: '900', fontSize: 13 },
   status: { position: 'absolute', left: 16, bottom: 14, backgroundColor: 'rgba(255,255,255,0.25)', borderRadius: 999, paddingHorizontal: 12, height: 30, justifyContent: 'center' },
   statusText: { fontFamily: FONT, color: C.white, fontWeight: '800', fontSize: 12 },
-  hint: { position: 'absolute', left: 20, bottom: 20, fontFamily: FONT, color: 'rgba(255,255,255,0.85)', fontWeight: '800', fontSize: 11 },
 });

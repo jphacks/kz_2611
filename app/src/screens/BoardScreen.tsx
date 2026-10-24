@@ -23,6 +23,7 @@ export function BoardScreen(p: ScreenProps) {
   const [chatId, setChatId] = useState<number | null>(null);
   const [members, setMembers] = useState<EventItem | null>(null);
   const [joining, setJoining] = useState<number | null>(null);
+  const [leaving, setLeaving] = useState<number | null>(null);
   const joiningRef = useRef(false);
   const active = useRef(true);
   const selected = useRef(group);
@@ -84,6 +85,20 @@ export function BoardScreen(p: ScreenProps) {
       void refresh().catch(() => {});
     } finally { joiningRef.current = false; if (active.current) setJoining(null); }
   }
+  async function leave(event: EventItem) {
+    if (joiningRef.current || event.is_host || !event.joined) return;
+    joiningRef.current = true; setLeaving(event.id); setActionError('');
+    try {
+      const result = await api<{ event: EventItem }>(`/events/${event.id}/join`, { method: 'DELETE' });
+      if (active.current) {
+        request.current++;
+        setEvents(old => old.map(e => e.id === result.event.id ? result.event : e));
+      }
+      void refresh().catch(() => {});
+    } catch (e) {
+      if (active.current) setActionError(errMsg(e));
+    } finally { joiningRef.current = false; if (active.current) setLeaving(null); }
+  }
   // 満員の募集は、参加していない人には表示しない（#33）。主催者・参加者には残す
   const visible = events.filter(e => e.expires_at > now && (e.joined || e.is_host || e.count < e.capacity)).sort((a, b) => a.expires_at - b.expires_at);
   return (
@@ -100,7 +115,7 @@ export function BoardScreen(p: ScreenProps) {
             <Pressable accessibilityRole="button" onPress={() => { setActionError(''); void refresh().catch(() => {}); void refreshMeta().catch(() => {}); }}><Text style={[T.body, { fontWeight: '800' }]}>再読み込み</Text></Pressable>
           </View>}
           {loading ? <View style={{ padding: 40 }}><ActivityIndicator color={C.ink} accessibilityLabel="募集を読み込み中" /></View> : visible.length ? visible.map(event =>
-            <EventCard key={event.id} event={event} now={now} joining={joining === event.id} onOpen={() => setChatId(event.id)} onJoin={() => { void join(event); }} onPressMembers={() => setMembers(event)} />
+            <EventCard key={event.id} event={event} now={now} joining={joining === event.id} leaving={leaving === event.id} onLeave={() => { void leave(event); }} onOpen={() => setChatId(event.id)} onJoin={() => { void join(event); }} onPressMembers={() => setMembers(event)} />
           ) : !error && <View style={{ backgroundColor: C.surface, borderRadius: 22, padding: 24, gap: 16 }}>
             <Text style={T.h1}>募集中の遊びは{'\n'}まだありません</Text>
             <Text style={T.sub}>{friendCount === 0 ? 'まずは友達を追加して、一緒に遊ぶ仲間を見つけましょう。' : group === 'all' ? '最初のひと声を、あなたから。友達を誘ってみましょう。' : 'このグループで、最初の募集をしてみましょう。'}</Text>
