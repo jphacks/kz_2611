@@ -9,7 +9,7 @@ require.extensions['.ts'] = (module, filename) => {
   }).outputText, filename);
 };
 const { validateDraft } = require('./form.ts');
-const valid = { title: 'ご飯', place: '', time_text: '', capacity: 4, duration_min: 30, group_id: null };
+const valid = { title: 'ご飯', place: '', time_text: '', capacity_min: 2, capacity: 4, duration_min: 30, group_id: null };
 test('タイトル必須・API契約の上限と選択肢を検証する', () => {
   assert.equal(validateDraft(valid), '');
   for (const change of [
