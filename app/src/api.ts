@@ -35,3 +35,6 @@ export interface EventItem {
 }
 export interface Message { id: number; event_id: number; user: User | null; kind: 'text' | 'system'; body: string; created_at: number }
 export interface Talk { event: EventItem; last: Message | null; active: boolean }
+/** 友達申請（#77）。GET /users/:id の request と GET /friend-requests */
+export type FriendRequestState = 'none' | 'sent' | 'received';
+export interface FriendRequests { received: User[]; sent: User[] }

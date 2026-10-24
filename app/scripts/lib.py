@@ -30,3 +30,10 @@ def new_user(prefix='u'):
     s, r = call('POST', '/register', {'handle': f'{prefix}{SUFFIX}_{_n}', 'name': f'{prefix}{_n}', 'password': 'password123'})
     expect(f'register {prefix}{_n}', s, 201)
     return r['token'], r['user']
+
+def make_friends(token_a, user_a, token_b, user_b):
+    """IDで友達申請して相手が承認する（#77）。a が申請、b が承認"""
+    s, r = call('POST', '/friends', {'handle': user_b['handle']}, token_a)
+    expect(f"申請 {user_a['handle']}→{user_b['handle']}", (s, r.get('status')), (200, 'requested'))
+    s, r = call('POST', f"/friend-requests/{user_a['id']}/accept", None, token_b)
+    expect(f"承認 {user_b['handle']}←{user_a['handle']}", (s, r.get('status')), (200, 'friends'))

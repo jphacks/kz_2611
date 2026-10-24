@@ -1,4 +1,4 @@
-from lib import call, expect, new_user
+from lib import call, expect, new_user, make_friends
 
 host, user = new_user('eventhost')
 other, outsider = new_user('eventother')
@@ -33,6 +33,8 @@ expect('期限再計算', r['event']['expires_at'], event['created_at'] + 15 * 6
 for change in ({'title': '期限を維持'}, {'duration_min': 15}):
     s, r = call('PATCH', path, change, host); expect('表示中の期限維持編集', s, 200)
     expect('durationが同じなら期限維持', r['event']['expires_at'], event['created_at'] + 15 * 60000)
+# IDでの追加は申請と承認が要る（#77）。承認後の再追加は「既に友達」で200
+make_friends(other, outsider, host, user)
 s, _ = call('POST', '/friends', {'handle': user['handle']}, other)
 if s == 404:
     print('skip 友達経由の参加・取り消し（friends API 未実装）')
@@ -189,7 +191,7 @@ if db_path:
 # 下限に達しても上限までは参加できる。
 s, _ = call('POST', '/friends', {'handle': user['handle']}, other); expect('幅テストの友達追加', s, 200)
 third, third_user = new_user('rangeThird')
-s, _ = call('POST', '/friends', {'handle': user['handle']}, third); expect('3人目の友達追加', s, 200)
+make_friends(third, third_user, host, user)
 for token, count in ((other, 2), (third, 3)):
     s, r = call('POST', rp + '/join', token=token)
     expect('上限までは参加できる', s, 200); expect('参加人数', r['event']['count'], count)

@@ -1,10 +1,9 @@
 """D1の通常のバインド上限を超える一覧でも、項目・所属・並び順を保つ。"""
-from lib import call, expect, new_user
+from lib import call, expect, new_user, make_friends
 
 host, host_user = new_user('listHost')
 member, member_user = new_user('listMember')
-s, _ = call('POST', '/friends', {'handle': host_user['handle']}, member)
-expect('一覧検証の友達追加', s, 200)
+make_friends(member, member_user, host, host_user)
 groups, ids = [], []
 try:
     for i in range(105):
