@@ -43,6 +43,8 @@ export const EventCard = memo(function EventCard({ event, onOpen, onJoin, onLeav
   const dragged = useRef(false);
   const start = useRef<0 | 1>(event.joined || joining ? 1 : 0);
   const travelled = fingerTravel(size.width);
+  // SVG の演出と同じ比率で上部情報も幅に合わせ、2行タイトルを収める。
+  const infoScale = (size.width || 358) / 358;
   // 参加・取り消し・削除の処理状態は親の props を正とし、失敗したら元の位置へ戻す。
   const touched = event.is_host ? !confirmDelete && !deleting : !leaving && (event.joined || joining);
   const canJoin = !event.joined && !event.is_host && !joining && !leaving && travelled > 0 && event.count < event.capacity && event.expires_at > now;
@@ -148,25 +150,25 @@ export const EventCard = memo(function EventCard({ event, onOpen, onJoin, onLeav
         {!status && <SvgLabel x={36} y={520} size={20} fill={event.joined ? C.white : event.is_host ? C.white : C.red}>{instruction}</SvgLabel>}
         <EventTimeLabel event={event} />
       </Svg>
-      <View pointerEvents="box-none" style={styles.info}>
-        <View style={styles.hostCol}>
-          <View style={styles.hostWrap}>
-            <Svg width={88} height={88} viewBox="0 0 100 100" style={StyleSheet.absoluteFill}>
+      <View pointerEvents="box-none" style={scaleInfo(styles.info, infoScale)}>
+        <View style={scaleInfo(styles.hostCol, infoScale)}>
+          <View style={scaleInfo(styles.hostWrap, infoScale)}>
+            <Svg width={88 * infoScale} height={88 * infoScale} viewBox="0 0 100 100" style={StyleSheet.absoluteFill}>
               <Circle cx={50} cy={50} r={44} fill="none" stroke="rgba(255,255,255,0.18)" strokeWidth={8} />
               <Path d="M 50 6 A 44 44 0 0 1 50 94 A 44 44 0 0 1 50 6" fill="none" stroke={C.white} strokeWidth={8} strokeLinecap="round" strokeDasharray={`${2 * Math.PI * 44 * Math.min(1, event.count / event.capacity)} ${2 * Math.PI * 44}`} />
             </Svg>
-            <View style={styles.hostPhoto}><Avatar user={event.host} size={76} /></View>
+            <View style={scaleInfo(styles.hostPhoto, infoScale)}><Avatar user={event.host} size={76 * infoScale} /></View>
           </View>
-          <Text numberOfLines={1} style={styles.hostName}>{event.host.name}</Text>
+          <Text numberOfLines={1} style={scaleInfo(styles.hostName, infoScale)}>{event.host.name}</Text>
         </View>
-        <View style={styles.details}>
-          <Text numberOfLines={2} style={styles.title}>{event.title}</Text>
-          <Text numberOfLines={1} style={styles.time}>{event.time_text || '時間は相談'}{event.place ? ` · ${event.place}` : ''}</Text>
-          <Pressable accessibilityRole="button" accessibilityLabel={`${event.count}人の参加者を見る`} hitSlop={8} onPress={e => { e.stopPropagation(); onPressMembers(event); }} style={styles.members}>
+        <View style={scaleInfo(styles.details, infoScale)}>
+          <Text numberOfLines={2} style={scaleInfo(styles.title, infoScale)}>{event.title}</Text>
+          <Text numberOfLines={1} style={scaleInfo(styles.time, infoScale)}>{event.time_text || '時間は相談'}{event.place ? ` · ${event.place}` : ''}</Text>
+          <Pressable accessibilityRole="button" accessibilityLabel={`${event.count}人の参加者を見る`} hitSlop={Math.max(8, (44 - 28 * infoScale) / 2)} onPress={e => { e.stopPropagation(); onPressMembers(event); }} style={scaleInfo(styles.members, infoScale)}>
             <View style={styles.avatarRow}>
-              {event.members.slice(0, 3).map((u, i) => <View key={u.id} style={i ? styles.memberOverlap : undefined}><Avatar user={u} size={28} border={C.ink} /></View>)}
+              {event.members.slice(0, 3).map((u, i) => <View key={u.id} style={i ? styles.memberOverlap : undefined}><Avatar user={u} size={28 * infoScale} border={C.ink} /></View>)}
             </View>
-            <Text style={styles.count}>{event.count}<Text style={styles.cap}> / {capacity}</Text></Text>
+            <Text style={scaleInfo(styles.count, infoScale)}>{event.count}<Text style={scaleInfo(styles.cap, infoScale)}> / {capacity}</Text></Text>
           </Pressable>
         </View>
       </View>
@@ -248,6 +250,12 @@ function EventExpiryGauge({ event, size }: { event: EventItem; size: { width: nu
   );
 }
 
+// flex は比率なので変えない。それ以外の数値はカード内の位置・大きさ。
+function scaleInfo<T extends object>(style: T, scale: number): T {
+  return Object.fromEntries(Object.entries(style).map(([key, value]) =>
+    [key, typeof value === 'number' && key !== 'flex' ? value * scale : value])) as T;
+}
+
 const styles = StyleSheet.create({
   card: { borderRadius: CARD_RADIUS, marginBottom: 14, aspectRatio: CARD_ASPECT, backgroundColor: C.ink, overflow: 'hidden' },
   info: { position: 'absolute', top: 0, left: 0, right: 0, flexDirection: 'row', gap: 14, paddingHorizontal: 18, paddingTop: 16 },
@@ -256,9 +264,9 @@ const styles = StyleSheet.create({
   hostPhoto: { position: 'absolute', left: 6, top: 6 },
   hostName: { fontFamily: FONT, color: C.white, fontWeight: '800', fontSize: 12, marginTop: 5, maxWidth: 88, textAlign: 'center' },
   details: { flex: 1, minWidth: 0, paddingTop: 6 },
-  title: { fontFamily: FONT, color: C.white, fontWeight: '900', fontSize: 28, lineHeight: 34, letterSpacing: -1 },
-  time: { fontFamily: FONT, color: 'rgba(255,255,255,0.92)', fontWeight: '700', fontSize: 14, marginTop: 4 },
-  members: { flexDirection: 'row', alignItems: 'center', gap: 8, minHeight: 44, marginTop: 4, alignSelf: 'flex-start' },
+  title: { fontFamily: FONT, color: C.white, fontWeight: '900', fontSize: 22, lineHeight: 26, letterSpacing: -1 },
+  time: { fontFamily: FONT, color: 'rgba(255,255,255,0.92)', fontWeight: '700', fontSize: 12, lineHeight: 16, marginTop: 4 },
+  members: { flexDirection: 'row', alignItems: 'center', gap: 8, minHeight: 28, marginTop: 4, alignSelf: 'flex-start' },
   avatarRow: { flexDirection: 'row', alignItems: 'center' },
   memberOverlap: { marginLeft: -8 },
   count: { fontFamily: FONT, color: C.white, fontWeight: '900', fontSize: 22 },
