@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { api, type Group, type User } from '../api';
 import { Header } from '../ui/Header';
@@ -35,18 +35,30 @@ export function FollowScreen({ me }: ScreenProps) {
   const editingGroup = groups.find(group => group.id === editingGroupId);
   const link = inviteLink(me.invite_code);
 
-  useEffect(() => {
+  const pendingInvite = useRef<string | null>(null);
+  const inviteRequest = useRef(0);
+  const checkInvite = useCallback(async () => {
     if (Platform.OS !== 'web') return;
-    const code = inviteFromUrl(window.location.href);
+    // 失敗したときは同じコードを覚えておき、「再読み込み」でもう一度確認する
+    const code = pendingInvite.current || inviteFromUrl(window.location.href);
     if (!code) return;
-    let active = true;
-    api<{ user: User }>('/invite/' + encodeURIComponent(code)).then(({ user }) => {
-      if (!active) return;
+    pendingInvite.current = code;
+    const request = ++inviteRequest.current;
+    try {
+      const { user } = await api<{ user: User }>('/invite/' + encodeURIComponent(code));
+      if (request !== inviteRequest.current) return;
+      pendingInvite.current = null;
       if (user.id === me.id) { setNotice('これは自分の招待リンクです。友達に共有しましょう。'); clearInvite(); }
       else setInvite({ code, user });
-    }).catch(e => { if (active) setError('招待を確認できませんでした: ' + errMsg(e)); });
-    return () => { active = false; };
+    } catch (e) {
+      if (request !== inviteRequest.current) return;
+      setError('招待を確認できませんでした: ' + errMsg(e));
+    }
   }, [me.id]);
+  useEffect(() => {
+    void checkInvite();
+    return () => { inviteRequest.current++; };
+  }, [checkInvite]);
 
   function clearInvite() {
     if (Platform.OS !== 'web') return;
@@ -99,7 +111,7 @@ export function FollowScreen({ me }: ScreenProps) {
   return <View style={S.screen}>
     <Header title="フォロー" />
     <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-      {!!(error || socialError || requestError) && <View accessibilityRole="alert" style={styles.panel}><Text style={S.error}>{error || socialError || requestError}</Text><Button label="再読み込み" ghost onPress={() => { setError(''); void reload(); void reloadRequests(); }} disabled={busy || loading} /></View>}
+      {!!(error || socialError || requestError) && <View accessibilityRole="alert" style={styles.panel}><Text style={S.error}>{error || socialError || requestError}</Text><Button label="再読み込み" ghost onPress={() => { setError(''); void reload(); void reloadRequests(); void checkInvite(); }} disabled={busy || loading} /></View>}
       {!!notice && <Text accessibilityLiveRegion="polite" style={T.body}>{notice}</Text>}
       {!!received.length && <View style={styles.panel}>
         <Text style={T.h2}>届いた友達申請 · {received.length}</Text>
