@@ -6,6 +6,7 @@ import { friendRoutes } from '../lib/friends';
 import { groupRoutes } from '../lib/groups';
 import { eventRoutes } from '../lib/events';
 import { chatRoutes } from '../lib/chat';
+import { pushRoutes } from '../lib/notify';
 
 const ROUTES: Route[] = [
   { method: 'GET', path: /^\/health$/, auth: false, handler: async ({ env }) => {
@@ -18,9 +19,10 @@ const ROUTES: Route[] = [
   ...groupRoutes,
   ...eventRoutes,
   ...chatRoutes,
+  ...pushRoutes,
 ];
 
-export const onRequest = async (ctx: { request: Request; env: Env }) => {
+export const onRequest = async (ctx: { request: Request; env: Env; waitUntil?: (p: Promise<unknown>) => void }) => {
   const req = ctx.request, env = ctx.env;
   const url = new URL(req.url);
   const path = url.pathname.replace(/^\/api/, '') || '/';
@@ -43,7 +45,8 @@ export const onRequest = async (ctx: { request: Request; env: Env }) => {
         catch { throw new HttpError(400, 'リクエストの形式が正しくありません'); }
         return cached;
       };
-      return await r.handler({ req, env, params: m.slice(1), me: me as User, url, body });
+      const waitUntil = (p: Promise<unknown>) => { if (ctx.waitUntil) ctx.waitUntil(p); else void p.catch(() => {}); };
+      return await r.handler({ req, env, params: m.slice(1), me: me as User, url, body, waitUntil });
     }
     throw new HttpError(pathMatched ? 405 : 404, pathMatched ? 'この操作はできません' : '見つかりません');
   } catch (e) {

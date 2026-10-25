@@ -11,6 +11,8 @@ import { CreateScreen } from './screens/CreateScreen';
 import { TalkScreen } from './screens/TalkScreen';
 import { FollowScreen } from './screens/FollowScreen';
 import { ProfileScreen } from './screens/ProfileScreen';
+import { takeEventLink } from './lib/eventLink';
+import { removePushOnLogout } from './lib/webPush';
 
 export type Tab = 'board' | 'create' | 'talk' | 'follow' | 'profile';
 export interface ScreenProps {
@@ -42,13 +44,16 @@ export function Main() {
     if (await loadToken()) { try { setMe((await api<{ user: Me }>('/me')).user); } catch { await setToken(null); } }
     setReady(true);
   })(); }, []);
+  // #87 通知から開いた募集（/?event=<id>）を掲示板で開く。ログイン前なら、ログイン後に開く
+  const [link, setLink] = useState(takeEventLink);
+  useEffect(() => { if (me && link !== undefined) { setNav({ openEventId: link }); setTab('board'); setLink(undefined); } }, [me, link]);
   if (!ready) return <View style={{ flex: 1, backgroundColor: C.bg }} />;
   if (!me) return <View style={{ flex: 1, backgroundColor: '#E9E9E9', alignItems: 'center' }}><SafeAreaView style={{ flex: 1, width: '100%', maxWidth: 480, backgroundColor: C.bg }}><AuthScreen onDone={setMe} /></SafeAreaView></View>;
   const props: ScreenProps = {
     me, setMe, ...nav,
     go: (t, o) => { setNav(o || {}); setTab(t); },
     clearNav: () => setNav({}),
-    logout: async () => { try { await api('/logout', { method: 'POST' }); } catch {} await setToken(null); setMe(null); setTab('board'); },
+    logout: async () => { await removePushOnLogout(); try { await api('/logout', { method: 'POST' }); } catch {} await setToken(null); setMe(null); setTab('board'); },
   };
   const Screen = { board: BoardScreen, create: CreateScreen, talk: TalkScreen, follow: FollowScreen, profile: ProfileScreen }[tab];
   return (

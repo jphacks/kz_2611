@@ -77,3 +77,6 @@ export const EVENT_VISIBLE_SQL = `(
 )`;
 /** :me を数値に置き換えた SQL 断片（me.id はサーバー側の整数なので安全） */
 export const visibleSql = (meId: number) => EVENT_VISIBLE_SQL.replaceAll(':me', String(Math.trunc(meId)));
+
+// #87 返事の後に続ける処理（通知の送信など）。Pages の waitUntil へ渡す
+export interface Ctx { waitUntil: (p: Promise<unknown>) => void }

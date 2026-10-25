@@ -49,3 +49,18 @@
 | GET | /events/:id/messages?after=<id> | — | { messages: Message[] }（id の昇順、最大200件） |
 | POST | /events/:id/messages | body(1-500) | 201 { message } |
 | GET | /talks | — | { talks: Talk[] }（自分が主催・参加したイベント。終了したものも。最新メッセージが新しい順） |
+
+## 通知・Web Push（担当: functions/lib/notify.ts、暗号化は functions/lib/push.ts）（#87）
+鍵は Pages の secret `VAPID_PUBLIC_KEY`（base64url の非圧縮公開鍵）・`VAPID_PRIVATE_KEY`（base64url の d）・任意で `VAPID_SUBJECT`（mailto: か https:）。本番には設定済みなので、デプロイのたびに設定し直す必要はない。手元で実際に送るときだけ `app/.dev.vars`（git に入れない）に置く。
+| GET | /push/key | — | { key: string \| null }（applicationServerKey。未設定なら null） |
+| POST | /push/subscribe | PushSubscription.toJSON() の endpoint, keys.p256dh, keys.auth | { ok }（endpoint は https・既定ポート・認証情報なしで、FCM / Mozilla / Apple / Windows のプッシュサービスだけ。鍵は P-256 の65バイトと16バイト。それ以外→400。同じ端末の再登録は冪等。別アカウントの届け先→409（画面は購読し直す）。1人10台まで、古いものから消す） |
+| DELETE | /push/subscribe | endpoint | { ok }（自分のその届け先だけ消す。オフ・ログアウト時に画面から呼ぶ。無くても200） |
+
+送る相手（送信は返事の後に waitUntil で行う。送れなかった 404/410 の届け先は消す）:
+| 場面 | 相手 | data |
+|---|---|---|
+| POST /events | その募集を見られる人（visibleSql と同じ条件）。主催者は除く | kind: created、title「新しい募集」、body に主催者名とタイトル |
+| POST /events/:id/join（新しく参加したとき） | 主催者 | kind: joined、body に参加者名とタイトル |
+| 同上で定員に達して終了したとき | 主催者と参加者。参加した本人は除く（主催者へは joined の代わりにこれを1通） | kind: full |
+通知の中身は { kind, title, body, event_id, tag }。タップすると `/?event=<event_id>` が開き、ログイン後に掲示板でその募集のチャットを開く。
+手元のテスト用に、localhost で鍵が無い（CI）か `PUSH_TEST_OUTBOX=1` で起動したときは送信せず記録し、`GET /push/test-outbox?event_id=<id>` で返す（それ以外は404）。
