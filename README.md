@@ -88,5 +88,3 @@
 
 ## デモ
 https://kz2611.pages.dev
-
-参加操作の動画（MP4）: [docs/images/demo-join.mp4](docs/images/demo-join.mp4)
