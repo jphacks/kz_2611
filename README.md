@@ -13,6 +13,8 @@
 
 **▶ アプリを使ってみる: https://kz2611.pages.dev**
 
+**▶ デモ動画（YouTube）: https://youtube.com/shorts/kQaDI3yDf1Q**
+
 <table>
   <tr>
     <td align="center"><img src="docs/images/screen-create.png" alt="誘う（募集を作る）画面" width="240"></td>
