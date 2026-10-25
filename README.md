@@ -44,72 +44,72 @@
 
 ### 製品説明
 <table>
-  <tr>
-    <td width="62%">
+<tr>
+<td width="62%">
 
 掲示板に遊びの募集を投稿し、参加したい人が指をスライドして参加できる形式のアプリです。募集には時間制限を設け、カードの外枠で残り時間を表示。参加者はアイコンで誰が参加しているかが分かり、イベント内のチャットで会話もできます。グループを作って友達同士で募集をかけたり、QR・招待リンクで友達を追加することもできます。
 
-    </td>
-    <td align="center"><img src="docs/images/product-invite.png" alt="ゆいの招待リンクと友達追加用QRコード" width="220"></td>
-  </tr>
+</td>
+<td align="center"><img src="docs/images/product-invite.png" alt="ゆいの招待リンクと友達追加用QRコード" width="220"></td>
+</tr>
 </table>
 
 ### 特長
 <table>
-  <tr>
-    <td width="50%" valign="top">
+<tr>
+<td width="50%" valign="top">
 
 #### 1. スライドで気軽に参加
 左にある自分の指（オレンジ）を右へスライドし、主催者の指先に触れるだけで参加できます。取り消しは左へスライドします。
 
-    </td>
-    <td width="50%" valign="top">
+</td>
+<td width="50%" valign="top">
 
 #### 4. はじめてでも操作を試せる
 初回オンボーディングで、募集から指をスライドしての参加、チャットまでをデモで体験できます。
 
-    </td>
-  </tr>
-  <tr>
-    <td width="50%" valign="top">
+</td>
+</tr>
+<tr>
+<td width="50%" valign="top">
 
 #### 2. 残り時間がひと目で分かる
 カードの外枠が残り時間のインジケーターになり、通常は黒、残り10分以下は黄色で表示されます。
 
 <p align="center"><img src="docs/images/feature-gauge.png" alt="あと5分の黄色い外枠と、残り時間が長いカラオケ募集の外枠を比較" width="220"></p>
 
-    </td>
-    <td width="50%" valign="top">
+</td>
+<td width="50%" valign="top">
 
 #### 3. メンツが見える
 参加者のアイコンが並び、主催者アイコン周りのインジケーターで集まった人数が分かります。タップで参加者詳細も確認できます。
 
 <p align="center"><img src="docs/images/feature-members.png" alt="タップで開く参加者詳細：主催のはると、そうた、ゆい" width="220"></p>
 
-    </td>
-  </tr>
-  <tr>
-    <td width="50%" valign="top">
+</td>
+</tr>
+<tr>
+<td width="50%" valign="top">
 
 #### 5. 参加した瞬間が楽しい
 参加が成立すると、鳥や紙吹雪と「とまった!!」の演出が流れます。効果音と振動はそれぞれオン・オフを選べ、端末の「視差効果を減らす」設定に合わせて揺れやフラッシュなどを抑えます（振動は対応端末のみです）。
 
-    </td>
-    <td width="50%" valign="top">
+</td>
+<td width="50%" valign="top">
 
 #### 6. 通知で募集や参加を見逃しにくい
 通知をオンにすると、新しい募集、主催した募集への参加、人数がそろったことを Web Push で受け取れます。iPhone ではホーム画面に追加（PWA）すると通知を受け取れます。
 
-    </td>
-  </tr>
-  <tr>
-    <td colspan="2" valign="top">
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top">
 
 #### 7. 友達とつながりやすい
 QR・招待リンクで友達を追加でき、ID での追加は申請・承認制です。参加者一覧からもプロフィールを開いて友達申請できます。
 
-    </td>
-  </tr>
+</td>
+</tr>
 </table>
 
 ### 解決できること
