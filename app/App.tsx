@@ -2,6 +2,7 @@ import { Platform } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { Main } from './src/Main';
+import { PreviewF6 } from './src/preview/f6/PreviewF6';
 
 if (Platform.OS === 'web' && typeof document !== 'undefined' && !document.getElementById('fonts')) {
   const l = document.createElement('link');
@@ -15,6 +16,15 @@ if (Platform.OS === 'web' && typeof document !== 'undefined' && !document.getEle
 }
 
 export default function App() {
+  // Web のみ: ?preview=f6 でログインなしのデザインプレビューを表示する
+  if (Platform.OS === 'web' && typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('preview') === 'f6') {
+    return (
+      <SafeAreaProvider>
+        <StatusBar style="dark" />
+        <PreviewF6 />
+      </SafeAreaProvider>
+    );
+  }
   return (
     <SafeAreaProvider>
       <StatusBar style="dark" />
