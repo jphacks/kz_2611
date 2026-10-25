@@ -1,4 +1,5 @@
 """D1の通常のバインド上限を超える一覧でも、項目・所属・並び順を保つ。"""
+from urllib.parse import quote
 from lib import call, expect, new_user, make_friends
 
 host, host_user = new_user('listHost')
@@ -27,7 +28,11 @@ try:
         expect('募集の期限・ID順', [(e['expires_at'], e['id']) for e in events],
                sorted((e['expires_at'], e['id']) for e in events))
         s, r = call('GET', '/talks', token=token); expect('大量トーク取得', s, 200)
-        talks = r['talks']
+        talks, cursor = list(r['talks']), r['next']
+        while cursor is not None:
+            s, r = call('GET', '/talks?limit=50&before=' + quote(cursor), token=token)
+            expect('大量トークの続き', s, 200)
+            talks += r['talks']; cursor = r['next']
         expect('トークを欠落なく取得', sorted(t['event']['id'] for t in talks), ids)
         expect('トークの最終日時・ID順',
                [(t['last']['created_at'], t['last']['id'], t['event']['id']) for t in talks],
