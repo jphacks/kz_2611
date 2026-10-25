@@ -8,22 +8,28 @@ require.extensions['.ts'] = (module, filename) => {
     compilerOptions: { module: ts.ModuleKind.CommonJS },
   }).outputText, filename);
 };
-const { resolveTimeText } = require('./time.ts');
-test('今すぐ・1時間後、ゼロ埋め、翌日・月年境界を扱い元のDateを変えない', () => {
-  const now = new Date(2026, 11, 31, 23, 30);
+const { roundUpTime, parseTimeText, formatWheelTime } = require('./time.ts');
+test('現在時刻を5分刻みに切り上げ、日をまたいでもDateを変えない', () => {
+  const now = new Date(2026, 11, 31, 23, 58);
   const before = now.getTime();
-  assert.equal(resolveTimeText('', '今すぐ', now), '23:30〜');
-  assert.equal(resolveTimeText('', '30分後', now), '明日 00:00〜');
-  assert.equal(resolveTimeText('', '1時間後', now), '明日 00:30〜');
+  assert.deepEqual(roundUpTime(now), { hour: 0, minute: 0 });
+  assert.deepEqual(roundUpTime(new Date(2026, 9, 24, 18, 3)), { hour: 18, minute: 5 });
+  assert.deepEqual(roundUpTime(new Date(2026, 9, 24, 18, 5)), { hour: 18, minute: 5 });
   assert.equal(now.getTime(), before);
-  assert.equal(resolveTimeText('', '今すぐ', new Date(2026, 9, 24, 8, 5)), '08:05〜');
-  assert.equal(resolveTimeText('', '1時間後', new Date(2026, 9, 24, 18, 12)), '19:12〜');
+  assert.deepEqual(roundUpTime(new Date(2026, 9, 24, 18, 5, 1)), { hour: 18, minute: 10 });
 });
-test('自由入力・空欄・保存済みの時刻は変換しない（候補と同じ文字でも）', () => {
-  for (const text of ['', '19時に集合', '30分後', '今すぐ', '明日 00:30〜', 'あ'.repeat(20)]) {
-    assert.equal(resolveTimeText(text, null, new Date(2026, 9, 24, 18, 12)), text);
+test('保存済みの時刻を解析し、古い自由入力は現在時刻へ戻す', () => {
+  const now = new Date(2026, 9, 24, 18, 3);
+  assert.deepEqual(parseTimeText('08:07〜', now), { hour: 8, minute: 7 });
+  assert.deepEqual(parseTimeText('明日 00:30〜', now), { hour: 0, minute: 30 });
+  for (const value of ['', '今すぐ', '19時', '24:00〜', '12:60〜', '8:05〜']) {
+    assert.deepEqual(parseTimeText(value, now), { hour: 18, minute: 5 });
   }
 });
-test('候補の30分後を保存時のローカル時刻へ変換する', () => {
-  assert.equal(resolveTimeText('', '30分後', new Date(2026, 9, 24, 18, 12)), '18:42〜');
+test('選択が現在の分より前なら翌日、同じ分なら今日としてゼロ埋め保存', () => {
+  const now = new Date(2026, 11, 31, 18, 5, 30);
+  assert.equal(formatWheelTime({ hour: 18, minute: 0 }, now), '明日 18:00〜');
+  assert.equal(formatWheelTime({ hour: 18, minute: 5 }, now), '18:05〜');
+  assert.equal(formatWheelTime({ hour: 19, minute: 0 }, now), '19:00〜');
+  assert.equal(formatWheelTime({ hour: 0, minute: 0 }, new Date(2026, 11, 31, 23, 59)), '明日 00:00〜');
 });

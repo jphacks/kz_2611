@@ -4,20 +4,20 @@ import { ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, ScrollVie
 import { api, type EventItem } from '../api';
 import type { ScreenProps } from '../Main';
 import { validateDraft, type Draft } from '../components/create/form';
-import { resolveTimeText, type TimePreset } from '../components/create/time';
+import { formatWheelTime, parseTimeText, roundUpTime, type WheelTime } from '../components/create/time';
+import { TimeWheel } from '../components/create/TimeWheel';
 import { useSocialData } from '../hooks/useSocialData';
 import { errMsg } from '../lib/util';
 import { Chip } from '../ui/Chip';
 import { Header } from '../ui/Header';
 import { C, S, T } from '../ui/theme';
 
-const TIMES: TimePreset[] = ['今すぐ', '30分後', '1時間後'];
 const emptyDraft = (): Draft => ({ title: '', place: '', time_text: '', capacity: 4, capacity_min: 2, duration_min: 30, group_id: null });
 
 export function CreateScreen(props: ScreenProps) {
   const editId = props.editEventId;
   const [draft, setDraft] = useState<Draft>(emptyDraft);
-  const [timePreset, setTimePreset] = useState<TimePreset | null>(null);
+  const [time, setTime] = useState<WheelTime>(() => roundUpTime(new Date()));
   const { groups, loading: socialLoading, error: socialError, refresh: refreshSocial } = useSocialData(props.me);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
@@ -30,7 +30,7 @@ export function CreateScreen(props: ScreenProps) {
   useEffect(() => {
     let active = true;
     generation.current += 1;
-    setLoading(true); setLoadError(''); setError(''); setOriginal(null); setDraft(emptyDraft()); setTimePreset(null);
+    setLoading(true); setLoadError(''); setError(''); setOriginal(null); setDraft(emptyDraft()); setTime(roundUpTime(new Date()));
     (async () => {
       try {
         const detail = editId ? await api<{ event: EventItem }>(`/events/${editId}`) : null;
@@ -39,6 +39,7 @@ export function CreateScreen(props: ScreenProps) {
         if (detail) {
           const e = detail.event;
           setOriginal(e);
+          setTime(parseTimeText(e.time_text, new Date()));
           setDraft({ title: e.title, place: e.place, time_text: e.time_text, capacity: e.capacity, capacity_min: e.capacity_min || e.capacity, duration_min: e.duration_min, group_id: e.group_id });
         }
       } catch (e) { if (active) setLoadError(errMsg(e)); }
@@ -54,7 +55,7 @@ export function CreateScreen(props: ScreenProps) {
     saving.current = true; setBusy(true); setError('');
     const current = generation.current;
     try {
-      const body: Partial<Draft> = { ...draft, title: draft.title.trim(), place: draft.place.trim(), time_text: resolveTimeText(draft.time_text, timePreset, new Date()) };
+      const body: Partial<Draft> = { ...draft, title: draft.title.trim(), place: draft.place.trim(), time_text: formatWheelTime(time, new Date()) };
       // 編集で表示時間を変えなければ、締切を計算し直さない。
       if (original && original.duration_min === draft.duration_min) delete body.duration_min;
       await api(editId ? `/events/${editId}` : '/events', { method: editId ? 'PATCH' : 'POST', body });
@@ -83,9 +84,10 @@ export function CreateScreen(props: ScreenProps) {
             <TextInput accessibilityLabel="場所" editable={!busy} style={S.input} maxLength={30} value={draft.place} onChangeText={v => change('place', v)} />
           </View>
           <View style={styles.section}>
-            <Text style={T.h2}>時間<Text style={T.sub}>　任意</Text></Text>
-            <View style={styles.chips}>{TIMES.map(time => <Chip key={time} label={time} on={timePreset === time} onPress={() => { if (!busy) { setTimePreset(time); change('time_text', ''); } }} />)}</View>
-            <TextInput accessibilityLabel="時間" editable={!busy} style={S.input} maxLength={20} value={draft.time_text} onChangeText={v => { setTimePreset(null); change('time_text', v); }} />
+            <Text style={T.h2}>時間</Text>
+            <TimeWheel value={time} onChange={setTime} disabled={busy} />
+            <Text accessibilityLiveRegion="polite" style={T.h2}>{formatWheelTime(time, new Date())}</Text>
+            <Text style={T.sub}>上下に回すか、数字をタップして選択。今より前の時刻は明日になります。</Text>
           </View>
           <View style={styles.section}>
             <Text style={T.h2}>人数<Text style={T.sub}>　あなたを含めて</Text></Text>
