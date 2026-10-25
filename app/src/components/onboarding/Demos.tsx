@@ -1,7 +1,23 @@
-import { useEffect, useRef, useState } from 'react';
-import { AccessibilityInfo, Animated, Easing, Image, StyleSheet, Text, View } from 'react-native';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { AccessibilityInfo, Animated, Easing, Image, PanResponder, Pressable, StyleSheet, Text, View } from 'react-native';
 import Svg, { Circle, G, Path, Rect } from 'react-native-svg';
 import { C, FONT, PILL, RADIUS, T, tint, popColor } from '../../ui/theme';
+
+// 本番の演出（JoinCelebration）と同じ鳥の絵を、5枚目の参加者に使う
+const BIRDS = [
+  require('../celebration/bird_orange.png'),
+  require('../celebration/bird_blue.png'),
+  require('../celebration/bird_pink.png'),
+];
+
+export interface DemoProps {
+  active: boolean;
+  reduced: boolean;
+  /** 本番の演出（JoinCelebration）を出している間はデモを止める */
+  paused?: boolean;
+  /** 指先が相手に触れた（参加が成立した）ときに呼ぶ */
+  onTouch?: () => void;
+}
 
 // X6 の Hand の線画を再利用。色は共通テーマに合わせる。
 function Hand({ x = 0, flip = false }: { x?: number; flip?: boolean }) {
@@ -44,31 +60,100 @@ function DemoCard({ title = 'カラオケ', compact = false }: { title?: string;
   </View>;
 }
 
-export function IntroDemo({ active, reduced }: { active: boolean; reduced: boolean }) {
+export function IntroDemo({ active, reduced }: DemoProps) {
   const p = useDemoProgress(active, reduced);
   return <View style={s.center}><Animated.View style={{ transform: [{ translateY: p.interpolate({ inputRange: [0, 1], outputRange: [6, -6] }) }] }}><Image source={require('../../../public/icons/icon-512.png')} accessibilityLabel="このゆびとまれの鳥" style={s.logo} /></Animated.View><Text style={[T.h1, { marginTop: 22 }]}>このゆびとまれ</Text><View style={s.tags}>{['誘う', '集まる', '遊ぶ'].map((word, i) => <View key={word} style={[s.tag, { backgroundColor: [C.red, C.blue, C.pink][i] }]}><Text style={s.white}>{word}</Text></View>)}</View></View>;
 }
 
-export function InviteDemo({ active, reduced }: { active: boolean; reduced: boolean }) {
+export function InviteDemo({ active, reduced }: DemoProps) {
   const p = useDemoProgress(active, reduced);
   return <View style={{ width: '100%', gap: 18 }}><View style={s.draft}><Text style={T.sub}>何して遊ぶ？</Text><Text style={T.h1}>カラオケ</Text><View style={s.row}>{['駅前', '19:00〜', '3人'].map(word => <View style={[s.tag, { backgroundColor: C.surface }]} key={word}><Text style={T.body}>{word}</Text></View>)}</View></View><Animated.View style={{ opacity: p.interpolate({ inputRange: [0, .6, 1], outputRange: [.25, 1, 1] }), transform: [{ translateY: p.interpolate({ inputRange: [0, 1], outputRange: [26, 0] }) }, { scale: p.interpolate({ inputRange: [0, 1], outputRange: [.94, 1] }) }] }}><DemoCard /></Animated.View><View style={s.published}><Text style={[s.white, { fontSize: 16 }]}>みんなを誘う →</Text></View></View>;
 }
 
-export function BoardDemo({ active, reduced }: { active: boolean; reduced: boolean }) {
+export function BoardDemo({ active, reduced }: DemoProps) {
   const p = useDemoProgress(active, reduced);
   return <View style={{ width: '100%', gap: 12 }}><View style={[s.row, { justifyContent: 'space-between' }]}><Text style={T.h1}>掲示板</Text><Text style={T.sub}>友達の募集</Text></View>{['カラオケ', 'ラーメン', '夜ドライブ'].map((title, i) => <Animated.View key={title} style={{ opacity: p.interpolate({ inputRange: [0, .25 + i * .2, 1], outputRange: [0, .55, 1] }), transform: [{ translateY: p.interpolate({ inputRange: [0, 1], outputRange: [45 + i * 20, 0] }) }] }}><DemoCard title={title} compact /></Animated.View>)}</View>;
 }
 
-export function SlideDemo({ active, reduced }: { active: boolean; reduced: boolean }) {
-  const p = useDemoProgress(active, reduced);
-  const [progress, setProgress] = useState(reduced ? 1 : 0);
-  useEffect(() => { const id = p.addListener(({ value }) => setProgress(value)); return () => p.removeListener(id); }, [p]);
-  return <View style={{ width: '100%', gap: 20 }}><View style={[s.card, { backgroundColor: C.ink, padding: 0, overflow: 'hidden' }]}><View style={{ padding: 24, gap: 6 }}><Text style={[s.white, { color: C.red, fontSize: 12 }]}>参加のデモ</Text><Text style={s.cardTitle}>カラオケ</Text><Text style={s.white}>19:00〜 · 駅前　2 / 3人</Text></View><Svg width="100%" height={150} viewBox="0 140 660 230" accessibilityLabel="左の指が右へスライドして主催者の指に触れるデモ"><Hand x={progress * 64} /><Hand x={-progress * 64} flip />{progress > .95 && <Circle cx={330} cy={265} r={13} fill={C.yellow} />}</Svg><View style={{ paddingHorizontal: 24, paddingBottom: 24 }}><Text style={[s.white, { color: C.red }]}>指を右へスライド →</Text></View></View><View style={s.tag}><Text style={[T.h2, { color: C.blue }]}>{progress > .95 ? 'タッチ！ 参加できた' : 'あなたの指 → 友達の指'}</Text></View></View>;
+const SLIDE_TOUCH = 0.94;
+
+export function SlideDemo({ active, reduced, paused = false, onTouch }: DemoProps) {
+  const value = useRef(new Animated.Value(0)).current;
+  // アニメーションの値は listener で読む（0〜1）
+  const progress = useRef(0);
+  const [shown, setShown] = useState(0);
+  const [dragging, setDragging] = useState(false);
+  const touched = useRef(false);
+  const loop = useRef<Animated.CompositeAnimation | null>(null);
+  const dragStart = useRef(0);
+  // 親が毎回新しい関数を渡しても PanResponder を作り直さない
+  const touchRef = useRef(onTouch);
+  touchRef.current = onTouch;
+
+  useEffect(() => {
+    const id = value.addListener(({ value: next }) => { progress.current = next; setShown(next); });
+    return () => value.removeListener(id);
+  }, [value]);
+
+  // 指先が相手に触れた瞬間。本番の演出は親（OnboardingScreen）が出す
+  const hit = useCallback(() => {
+    if (touched.current) return;
+    touched.current = true;
+    loop.current?.stop();
+    value.setValue(1);
+    touchRef.current?.();
+  }, [value]);
+  const hitRef = useRef(hit);
+  hitRef.current = hit;
+
+  // 自動デモ。演出中（paused）と指で動かしている間は止め、終わったら最初から流す
+  useEffect(() => {
+    if (!active || reduced || paused || dragging) {
+      if (reduced) value.setValue(1);
+      return;
+    }
+    touched.current = false;
+    value.setValue(0);
+    const sequence = Animated.loop(Animated.sequence([
+      Animated.delay(450),
+      Animated.timing(value, { toValue: 1, duration: 1600, easing: Easing.inOut(Easing.cubic), useNativeDriver: false }),
+      Animated.delay(1800),
+      Animated.timing(value, { toValue: 0, duration: 350, useNativeDriver: false }),
+    ]));
+    loop.current = sequence;
+    sequence.start();
+    const id = value.addListener(({ value: next }) => { if (next > SLIDE_TOUCH) hitRef.current(); });
+    return () => { value.removeListener(id); sequence.stop(); loop.current = null; };
+  }, [active, reduced, paused, dragging, value]);
+
+  // 自分でスライドした場合も、指先が触れた時点で参加にする
+  const pan = useRef(PanResponder.create({
+    onStartShouldSetPanResponder: () => false,
+    onMoveShouldSetPanResponder: (_event, gesture) => gesture.dx > 8 && gesture.dx > Math.abs(gesture.dy),
+    onPanResponderGrant: () => { dragStart.current = progress.current; setDragging(true); },
+    onPanResponderMove: (_event, gesture) => {
+      value.setValue(Math.max(0, Math.min(1, dragStart.current + gesture.dx / 140)));
+    },
+    onPanResponderRelease: () => {
+      setDragging(false);
+      if (progress.current > SLIDE_TOUCH) hitRef.current();
+      touched.current = progress.current > SLIDE_TOUCH;
+    },
+    onPanResponderTerminate: () => setDragging(false),
+  })).current;
+
+  return <View style={{ width: '100%', gap: 20 }}><View style={[s.card, { backgroundColor: C.ink, padding: 0, overflow: 'hidden' }]}><View style={{ padding: 24, gap: 6 }}><Text style={[s.white, { color: C.red, fontSize: 12 }]}>参加のデモ</Text><Text style={s.cardTitle}>カラオケ</Text><Text style={s.white}>19:00〜 · 駅前　2 / 3人</Text></View>
+    <Pressable accessibilityRole="button" accessibilityLabel="左の指を右へスライドして参加（タップでも参加できます）" onPress={hit}>
+      <View {...pan.panHandlers}>
+        <Svg width="100%" height={150} viewBox="0 140 660 230"><Hand x={shown * 64} /><Hand x={-shown * 64} flip />{shown > .95 && <Circle cx={330} cy={265} r={13} fill={C.yellow} />}</Svg>
+      </View>
+    </Pressable>
+    <View style={{ paddingHorizontal: 24, paddingBottom: 24 }}><Text style={[s.white, { color: C.red }]}>指を右へスライド →</Text></View></View><View style={s.tag}><Text style={[T.h2, { color: C.blue }]}>{shown > .95 ? 'タッチ！ 参加できた' : 'あなたの指 → 友達の指'}</Text></View></View>;
 }
 
-export function ChatDemo({ active, reduced }: { active: boolean; reduced: boolean }) {
+export function ChatDemo({ active, reduced }: DemoProps) {
   const p = useDemoProgress(active, reduced);
-  return <View style={{ width: '100%', gap: 20 }}><View style={s.row}>{[0, 1, 2].map(i => <Animated.Image key={i} source={require('../../../public/icons/icon-512.png')} style={{ width: 58, height: 58, borderRadius: PILL, transform: [{ translateY: p.interpolate({ inputRange: [0, 1], outputRange: [i % 2 ? 10 : -10, 0] }) }] }} />)}<Text style={[T.h2, { color: C.red }]}>3 / 3人</Text></View><Text style={[T.huge, { color: C.red, fontSize: 40 }]}>とまった!!</Text><View style={s.chat}><Text style={[T.sub, { textAlign: 'center', marginBottom: 8 }]}>参加者だけのチャット</Text><View style={[s.bubble, { backgroundColor: tint(0), alignSelf: 'flex-start' }]}><Text style={T.body}>駅前で集合しよう！</Text></View><Animated.View style={[s.bubble, { backgroundColor: C.blue, alignSelf: 'flex-end', opacity: p.interpolate({ inputRange: [0, 1], outputRange: [.3, 1] }) }]}><Text style={s.white}>今から行くね！</Text></Animated.View><View style={[s.bubble, { backgroundColor: tint(3), alignSelf: 'flex-start' }]}><Text style={T.body}>楽しみ！</Text></View></View></View>;
+  return <View style={{ width: '100%', gap: 20 }}><View style={s.row}>{[0, 1, 2].map(i => <Animated.Image key={i} source={BIRDS[i]} resizeMode="contain" style={{ width: 58, height: 58, transform: [{ translateY: p.interpolate({ inputRange: [0, 1], outputRange: [i % 2 ? 10 : -10, 0] }) }] }} />)}<Text style={[T.h2, { color: C.red }]}>3 / 3人</Text></View><Text style={[T.huge, { color: C.red, fontSize: 40 }]}>とまった!!</Text><View style={s.chat}><Text style={[T.sub, { textAlign: 'center', marginBottom: 8 }]}>参加者だけのチャット</Text><View style={[s.bubble, { backgroundColor: tint(0), alignSelf: 'flex-start' }]}><Text style={T.body}>駅前で集合しよう！</Text></View><Animated.View style={[s.bubble, { backgroundColor: C.blue, alignSelf: 'flex-end', opacity: p.interpolate({ inputRange: [0, 1], outputRange: [.3, 1] }) }]}><Text style={s.white}>今から行くね！</Text></Animated.View><View style={[s.bubble, { backgroundColor: tint(3), alignSelf: 'flex-start' }]}><Text style={T.body}>楽しみ！</Text></View></View></View>;
 }
 
 const s = StyleSheet.create({
