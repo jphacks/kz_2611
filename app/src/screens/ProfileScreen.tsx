@@ -8,7 +8,7 @@ import { Header } from '../ui/Header';
 import { Avatar } from '../ui/Avatar';
 import { C, S, T } from '../ui/theme';
 import { errMsg } from '../lib/util';
-import { jpegDataUrl, profilePatch } from '../components/profile/profile';
+import { jpegDataUrl, profilePatch, validateImageAsset } from '../components/profile/profile';
 import { PhotoCropModal } from '../components/profile/PhotoCropModal';
 import { NotificationToggle } from '../components/profile/NotificationToggle';
 import { CelebrationSettings } from '../components/celebration/CelebrationSettings';
@@ -37,6 +37,7 @@ export function ProfileScreen(props: ScreenProps) {
       const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], allowsMultipleSelection: false });
       if (result.canceled) return;
       const asset = result.assets[0];
+      validateImageAsset(asset);
       setCropAsset(asset);
     } catch (e) { setError(errMsg(e)); }
     finally { lock.current = false; setBusy(null); }
