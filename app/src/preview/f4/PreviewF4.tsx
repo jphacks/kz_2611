@@ -164,6 +164,22 @@ function Stamp({ joined, progress }: { joined: boolean; progress: number }) {
   );
 }
 function Glass({ joined, night }: { joined: boolean; night: boolean }) {
+  const [wave, setWave] = useState(1);
+  useEffect(() => {
+    if (
+      !joined ||
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches
+    )
+      return;
+    const start = Date.now();
+    setWave(0);
+    const t = setInterval(() => {
+      const p = Math.min(1, (Date.now() - start) / 650);
+      setWave(p);
+      if (p === 1) clearInterval(t);
+    }, 30);
+    return () => clearInterval(t);
+  }, [joined]);
   return (
     <Svg width="100%" height="100%" viewBox="0 0 642 410">
       <Defs>
@@ -212,7 +228,7 @@ function Glass({ joined, night }: { joined: boolean; night: boolean }) {
           <Circle
             cx={153}
             cy={135}
-            r={47}
+            r={24 + 23 * wave}
             fill="none"
             stroke="white"
             strokeWidth={3}
@@ -220,7 +236,7 @@ function Glass({ joined, night }: { joined: boolean; night: boolean }) {
           <Circle
             cx={153}
             cy={135}
-            r={64}
+            r={24 + 40 * wave}
             fill="none"
             stroke="white"
             strokeWidth={2}
