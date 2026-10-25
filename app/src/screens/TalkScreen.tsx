@@ -29,8 +29,9 @@ export function TalkScreen(p: ScreenProps) {
       try {
         const data = await api<TalkPage>(`/talks?limit=${TALKS_PAGE_SIZE}`);
         if (mounted.current) {
-          setTalks(old => mergeFirstPage(old, data.talks));
-          if (!deeper.current) setNext(data.next);
+          setTalks(old => mergeFirstPage(old, data.talks, data.next));
+          if (!deeper.current || data.next === null) setNext(data.next);
+          if (data.next === null) deeper.current = false;
           setError('');
         }
       } catch (e) {
