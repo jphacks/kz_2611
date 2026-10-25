@@ -3,6 +3,8 @@ import {
   AccessibilityInfo,
   Animated,
   PanResponder,
+  Platform,
+  type ViewStyle,
   Pressable,
   ScrollView,
   Text,
@@ -302,6 +304,8 @@ function Detail({ i }: { i: number }) {
     [pull, setPull] = useState(0),
     [beat, setBeat] = useState(1);
   const reduced = useRef(false);
+  const pullStart = useRef<number | null>(null);
+  const pulled = useRef(false);
   useEffect(() => {
     AccessibilityInfo.isReduceMotionEnabled().then((v) => {
       reduced.current = v;
@@ -342,11 +346,37 @@ function Detail({ i }: { i: number }) {
     >
       <Pressable
         {...(i === 0 ? pan.panHandlers : {})}
+        onPointerDown={(event) => {
+          if (i === 0) {
+            pullStart.current = event.nativeEvent.pageY;
+            pulled.current = false;
+          }
+        }}
+        onPointerMove={(event) => {
+          if (i === 0 && pullStart.current !== null) {
+            const dy = event.nativeEvent.pageY - pullStart.current;
+            if (dy > 8) pulled.current = true;
+            setPull(Math.max(0, Math.min(55, dy)));
+          }
+        }}
+        onPointerUp={() => {
+          if (i === 0) {
+            if (pulled.current) set(true);
+            setPull(0);
+            pullStart.current = null;
+          }
+        }}
         accessibilityRole="button"
         accessibilityLabel={detailNames[i] + "を試す"}
-        onPress={() => set(!on)}
+        onPress={() => {
+          if (i === 0 && pulled.current) return;
+          set(!on);
+        }}
         style={{
           backgroundColor: i === 5 ? K : "white",
+          ...(Platform.OS === "web" && i === 0
+            ? ({ touchAction: "none" } as ViewStyle)
+            : {}),
           borderRadius: 28,
           minHeight: 178,
           alignItems: "center",
@@ -875,12 +905,22 @@ function Combo({ i }: { i: number }) {
         >
           <Pressable
             {...pan.panHandlers}
-            onPointerDown={event => { pointerStart.current = event.nativeEvent.pageX; }}
-            onPointerUp={event => {
+            style={
+              Platform.OS === "web"
+                ? ({ touchAction: "pan-y" } as ViewStyle)
+                : undefined
+            }
+            onPointerDown={(event) => {
+              pointerStart.current = event.nativeEvent.pageX;
+            }}
+            onPointerUp={(event) => {
               if (pointerStart.current !== null) {
                 const dx = event.nativeEvent.pageX - pointerStart.current;
                 if (dx > 45) finish();
-                if (dx < -45) { set(false); stamp(false); }
+                if (dx < -45) {
+                  set(false);
+                  stamp(false);
+                }
               }
               pointerStart.current = null;
             }}

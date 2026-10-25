@@ -5,9 +5,9 @@
 - Published branch: `ui-f6`, https://ui-f6.kz2611.pages.dev/?preview=f6
 - `npm install`, `npm run typecheck`, `npm run build`: passed.
 - Browser viewport 390 × 844; all 9 logos, 6 details, 3 combinations captured. `checks.json` enumerates all 18 entries.
-- All three combinations changed to joined state through browser pointer swipe event sequences. `gestures.json` records the exact resulting labels. Direct CDP touch injection timed out in the browser harness; this is not a physical-device gesture verification.
+- All three combinations changed to joined state through real CDP touchStart → repeated touchMove → touchEnd swipes, with `touchAction: pan-y`. `gestures.json` records the exact resulting labels. Synthetic pointer events were also checked but were not treated as proof of a real swipe. Browser IPC timeouts were resolved by bringing the tab to the foreground and using `_response_timeout=30`.
 - L: geometric finger / separate dot / fingerprint paths / yubi typography / single-line pointing hand / orange icon / two Japanese wordmarks / black fingerprint icon / blue exclamation icon.
-- M: pull-to-refresh (PanResponder and tap fallback), sequential loading fingers (tap to start/stop), empty-to-first-recruitment mock state, notification text toggle, five working tabs (no oversized center), outlined horizontal fingertip success illustration.
+- M: pull-to-refresh (PanResponder, pointer gesture and tap fallback), sequential loading fingers (tap to start/stop), empty-to-first-recruitment mock state, notification text toggle, five working tabs (no oversized center), outlined horizontal fingertip success illustration. Real CDP pull-to-refresh, long-press fingerprint stamp, and profile-tab color selection passed; `extras.json` records these checks.
 - R-A: blue perch card, host at the left of the white perch, participant circles and dotted seats, pink joining participant, landing motion, optional long-press fingerprint stamp.
 - R-B: black card with opposing orange/white outline fingers, join status and contact spark.
 - R-C: orange card, vertical finger-joint capacity gauge, host fingertip, filled third joint and participant, bottom-left palm, black remaining-time pill.
