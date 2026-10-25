@@ -1,0 +1,27 @@
+# OS・エディタのメタデータ
+.DS_Store
+*.swp
+
+# 依存とビルド生成物（app/ 側にも .gitignore がある）
+node_modules/
+dist/
+.expo/
+.wrangler/
+
+# ログ・一時ファイル
+*.log
+
+# 秘密情報（手元の環境変数）。値はコミットしない
+.env
+.env.*
+!.env.example
+.dev.vars
+
+# AIエージェントの一時ファイル
+.oc_task*.md
+.claude/
+
+# Python（APIテスト）
+__pycache__/
+*.pyc
+.pytest_cache/
