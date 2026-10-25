@@ -210,4 +210,22 @@ test('人数リングは12時開始の時計回りPath、残り時間ゲージ�
   const paths = nodes(tree).filter(n => n.type === 'Path');
   assert.ok(paths.some(n => n.props.d === 'M 50 6 A 44 44 0 0 1 50 94 A 44 44 0 0 1 50 6'));
   const gauge = paths.find(n => n.props.strokeDashoffset !== undefined); assert.ok(gauge.props.strokeDashoffset < 0);
+  // カードは黒地なのでゲージも黒。締切10分以下だけ黄（X6 の見た目を崩さない）
+  assert.equal(gauge.props.stroke, '#111111');
+  assert.equal(gauge.props.strokeWidth, 6);
+  const soon = nodes(h.render({ now: 3540000 })).find(n => n.type === 'Path' && n.props.strokeDashoffset !== undefined);
+  assert.equal(soon.props.stroke, '#FFD43B');
+});
+
+test('見た目は X6 の色と位置のまま（LIVEの灰色・ライム・スライダーの帯・文言）', () => {
+  const h = harness();
+  const badge = () => nodes(h.tree).find(n => n.type === 'SvgText' && n.props.children.join('').includes('LIVE'));
+  assert.equal(badge().props.fill, '#B2B2B2');
+  assert.ok(nodes(h.tree).some(n => n.type === 'Rect' && n.props.height === 5 && n.props.fill === '#FFFFFF33'), 'スライダーの帯は #FFFFFF33');
+  h.handlers.onPanResponderGrant(); h.handlers.onPanResponderMove(null, { dx: 30 });
+  const message = nodes(h.render()).find(n => n.type === 'SvgText' && n.props.children.join('') === '近づいてる…');
+  // X6 は x242 y210。390px では人数の行に重なるので、X6 の見え方を保ったまま y240 へ
+  assert.deepEqual([message.props.x, message.props.y, message.props.fontSize, message.props.fill], [242, 240, 22, '#E5FF56']);
+  const joined = flush(h, { event: { ...h.props.event, joined: true } });
+  assert.equal(nodes(joined).find(n => n.type === 'SvgText' && n.props.children.join('').includes('JOINED')).props.fill, '#E5FF56');
 });

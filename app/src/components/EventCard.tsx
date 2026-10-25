@@ -24,7 +24,7 @@ const CARD_RADIUS = 27;
 const CARD_ASPECT = 660 / 580;
 const FINGER_SHIFT = 64;
 const LIME = '#E5FF56';
-const TRACK = 'rgba(255,255,255,0.33)';
+const TRACK = '#FFFFFF33';
 const LIVE = '#B2B2B2';
 const BIRDS = [
   require('./celebration/bird_black.png'),
@@ -122,20 +122,12 @@ export const EventCard = memo(function EventCard({ event, onOpen, onJoin, onLeav
       <EventExpiryGauge event={event} size={size} />
       <Svg width="100%" height="100%" viewBox="0 0 660 580" style={StyleSheet.absoluteFill} pointerEvents="none">
         <SvgLabel x={624} y={40} size={18} anchor="end" fill={event.is_host || event.joined ? LIME : LIVE}>{badge}</SvgLabel>
-        {!event.joined && progress > 0 && <G>
+        {!event.joined && !event.is_host && progress > 0 && <G>
           <Circle cx={330} cy={368} r={12 + progress * 37} stroke={LIME} strokeWidth={2 + progress * 4} fill={LIME} fillOpacity={progress * 0.3} />
-          {/* X6 は y210 だが、スマホ幅では募集の人数行に重なるため、指の下へ移す */}
-          <SvgLabel x={330} y={446} size={20} fill={LIME} anchor="middle">{progress > 0.7 ? 'もうすぐ…！' : '近づいてる…'}</SvgLabel>
+          {/* X6 は x242 y210。390px では人数の行に重なるので、X6 の見え方を保ったまま人数の下へずらす */}
+          <SvgLabel x={242} y={240} size={22} fill={LIME}>{progress > 0.7 ? 'もうすぐ…！' : '近づいてる…'}</SvgLabel>
         </G>}
         {joinedView && <G opacity={0.17}>{[0, 1, 2, 3, 4, 5, 6, 7].map(i => <Path key={i} d="M330 280 L290 -100 L370 -100 Z" fill={C.white} transform={`rotate(${i * 45} 330 280)`} />)}</G>}
-        <G transform="translate(0 103)">
-          <Hand x={progress * FINGER_SHIFT + (progress > 0.7 && !event.joined ? Math.sin(progress * 160) * 3 : 0)} ghost={!event.joined} />
-          <Hand x={-progress * FINGER_SHIFT} flip />
-          {(event.joined || event.is_host) && <G stroke={LIME} strokeWidth={7}>
-            <Circle cx={330} cy={265} r={14} fill={LIME} />
-            <Path d="M330 220 V198 M330 310 V332 M288 235 L270 217 M372 235 L390 217 M288 295 L270 313 M372 295 L390 313" />
-          </G>}
-        </G>
         {joinedView && <G>
           <SvgLabel x={330} y={300} size={52} fill={LIME} anchor="middle">WELCOME!!</SvgLabel>
           <SvgLabel x={330} y={332} size={22} anchor="middle">{event.count}人で集まりました</SvgLabel>
@@ -143,6 +135,14 @@ export const EventCard = memo(function EventCard({ event, onOpen, onJoin, onLeav
           <SvgLabel x={624} y={446} size={16} anchor="end">主催者</SvgLabel>
           <SvgLabel x={330} y={446} size={18} anchor="middle" fill={C.white}>♥</SvgLabel>
         </G>}
+        <G transform="translate(0 103)">
+          <Hand x={progress * FINGER_SHIFT + (progress > 0.7 && !event.joined ? Math.sin(progress * 160) * 3 : 0)} ghost={!touched} />
+          <Hand x={-progress * FINGER_SHIFT} flip />
+          {(event.joined || event.is_host) && <G stroke={LIME} strokeWidth={7}>
+            <Circle cx={330} cy={265} r={14} fill={LIME} />
+            <Path d="M330 220 V198 M330 310 V332 M288 235 L270 217 M372 235 L390 217 M288 295 L270 313 M372 295 L390 313" />
+          </G>}
+        </G>
         <Rect x={36} y={470} width={588} height={5} rx={3} fill={TRACK} />
         <Rect x={36} y={470} width={Math.max(5, 588 * progress)} height={5} rx={3} fill={LIME} />
         {!status && <SvgLabel x={36} y={520} size={20} fill={event.joined ? C.white : event.is_host ? C.white : C.red}>{instruction}</SvgLabel>}
@@ -236,13 +236,13 @@ function EventExpiryGauge({ event, size }: { event: EventItem; size: { width: nu
   const r = CARD_RADIUS - 2, sw = 6;
   const w = Math.max(0, size.width - sw), h = Math.max(0, size.height - sw);
   const perimeter = Math.max(0, 2 * (w + h) - 8 * r + 2 * Math.PI * r);
-  // 上辺の中央から時計回りに減っていく残り時間のゲージ。黒いカードなので白で描く。
+  // 上辺の中央から時計回りに減っていく残り時間のゲージ。X6 の黒いカードに合わせて黒で描き、締切が近いと黄になる。
   const gauge = w > 2 * r && h > 2 * r ? `M ${sw / 2 + w / 2} ${sw / 2} H ${sw / 2 + w - r} A ${r} ${r} 0 0 1 ${sw / 2 + w} ${sw / 2 + r} V ${sw / 2 + h - r} A ${r} ${r} 0 0 1 ${sw / 2 + w - r} ${sw / 2 + h} H ${sw / 2 + r} A ${r} ${r} 0 0 1 ${sw / 2} ${sw / 2 + h - r} V ${sw / 2 + r} A ${r} ${r} 0 0 1 ${sw / 2 + r} ${sw / 2} Z` : '';
   return (
     <View pointerEvents="none" style={StyleSheet.absoluteFill}>
       <Svg width="100%" height="100%">
-        <Rect x={sw / 2} y={sw / 2} width={w} height={h} rx={r} ry={r} fill="none" stroke="rgba(255,255,255,0.18)" strokeWidth={sw} />
-        {!!gauge && <Path d={gauge} fill="none" stroke={soon ? C.yellow : C.white} strokeWidth={sw} strokeLinecap="round" strokeDasharray={`${perimeter * fraction} ${perimeter}`} strokeDashoffset={-perimeter * (1 - fraction)} />}
+        <Rect x={sw / 2} y={sw / 2} width={w} height={h} rx={r} ry={r} fill="none" stroke="rgba(0,0,0,0.10)" strokeWidth={sw} />
+        {!!gauge && <Path d={gauge} fill="none" stroke={soon ? C.yellow : C.ink} strokeWidth={sw} strokeLinecap="round" strokeDasharray={`${perimeter * fraction} ${perimeter}`} strokeDashoffset={-perimeter * (1 - fraction)} />}
       </Svg>
     </View>
   );
