@@ -84,6 +84,26 @@ function progressWidth(tree) {
 }
 function flush(h, change = {}) { h.render(change); return h.render(); }
 
+// SVG の WELCOME 上端より前に、2行タイトル・時間・人数の情報領域が収まる。
+function flatStyle(style) { return Object.assign({}, ...[style].flat(Infinity).filter(Boolean)); }
+test('320px・390px・PCでも2行タイトルと参加済み演出が重ならない', () => {
+  const h = harness();
+  for (const width of [288, 358, 448]) {
+    h.tree.props.onLayout({ nativeEvent: { layout: { width, height: width * 580 / 660 } } });
+    const tree = h.render({ event: { ...h.props.event, joined: true } });
+    const all = nodes(tree);
+    const title = flatStyle(all.find(n => n.type === 'Text' && n.props.children.includes('カラオケ')).props.style);
+    const time = flatStyle(all.find(n => n.type === 'Text' && n.props.children.includes('19:00〜')).props.style);
+    const members = flatStyle(labeled(tree, '1人の参加者を見る').props.style);
+    const details = flatStyle(all.find(n => flatStyle(n.props.style).minWidth === 0).props.style);
+    const info = flatStyle(all.find(n => flatStyle(n.props.style).paddingTop !== undefined && flatStyle(n.props.style).right === 0).props.style);
+    const bottom = info.paddingTop + details.paddingTop + title.lineHeight * 2 + time.marginTop + (time.lineHeight || time.fontSize * 1.3) + members.marginTop + Math.max(members.minHeight, 28 * width / 358);
+    assert.ok(bottom < (300 - 52) * width / 660, `${width}px: 情報末尾 ${bottom} はWELCOME上端より前`);
+    const hitSlop = labeled(tree, '1人の参加者を見る').props.hitSlop;
+    assert.ok(members.minHeight + hitSlop * 2 >= 44, '参加者のタップ領域は44px以上');
+  }
+});
+
 test('参加済みを左へ半分超スワイプすると取り消し、短い場合は触れた位置へ戻る', () => {
   const base = harness().props.event;
   const h = harness({ event: { ...base, joined: true } });
