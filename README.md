@@ -1,13 +1,10 @@
 <h1 align="center">このゆびとまれ</h1>
 
-<h3 align="center">ファーストペンギンを一人にしない</h3>
-
 <p align="center">
   <img src="https://img.shields.io/badge/JPHACKS%202026%20%E9%87%91%E6%B2%A2-Hack%20Day%20Block%20Sponsor%20Award%EF%BC%88%E3%83%87%E3%82%A3%E3%83%83%E3%83%97%E6%A0%AA%E5%BC%8F%E4%BC%9A%E7%A4%BE%EF%BC%89-orange?style=for-the-badge&logo=trophy" alt="JPHACKS 2026 金沢会場 Hack Day Block Sponsor Award（ディップ株式会社）">
 </p>
 
-<p align="center">🏆 <strong>金沢会場 Hack Day Block Sponsor Award（ディップ株式会社）受賞</strong><br>
-「夢とアイデアと情熱で、誰かの明日を良くしたチーム」に贈られる賞です</p>
+<p align="center">🏆 <strong>金沢会場 Hack Day Block Sponsor Award（ディップ株式会社）受賞</strong></p>
 
 <p align="center">
   <img src="https://img.shields.io/badge/TypeScript-3178C6?style=flat&logo=typescript&logoColor=white" alt="TypeScript">
