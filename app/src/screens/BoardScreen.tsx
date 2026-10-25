@@ -7,6 +7,7 @@ import { ChatSheet } from '../components/ChatSheet';
 import { EventCard } from '../components/EventCard';
 import { compareBoardEvents } from '../components/board/eventOrder';
 import { JoinCelebration } from '../components/celebration/JoinCelebration';
+import { preloadBirdImages } from '../components/celebration/birds';
 import { prepareCelebrationSound } from '../components/celebration/feedback';
 import { useCelebrateSettings } from '../components/celebration/settings';
 import { ParticipantsSheet } from '../components/ParticipantsSheet';
@@ -40,6 +41,8 @@ export function BoardScreen(p: ScreenProps) {
   const request = useRef(0);
   useEffect(() => {
     active.current = true;
+    // 参加の演出で使う鳥の画像を、参加する前に読み込んでおく（#98）
+    preloadBirdImages();
     return () => { active.current = false; };
   }, []);
   useEffect(() => {

@@ -1,13 +1,12 @@
-// #93 参加が成立した瞬間の演出のタイミング。RN に依存しない純粋関数だけを置く
+// #93 / #98 参加が成立した瞬間の演出のタイミング。RN に依存しない純粋関数だけを置く
 
 export const CELEBRATION = {
-  hitStopMs: 150,   // 参加が決まった直後の硬直（ヒットストップ）
-  burstMs: 2800,    // そのあとの大群・文字・閃光
+  burstMs: 2800,    // 触れた瞬間から大群・文字・閃光が終わるまで（ヒットストップは無し）
   birds: 240,       // 鳥の大群の数
   sparks: 156,      // 紙吹雪の数
   zoom: 1.08,       // 画面のズーム
   shake: 18,        // 画面の揺れの最大幅（px）
-  letters: 340,     // 「とまった!!」の1文字目が出るまで
+  letters: 340,     // 「とまった!!」の1文字目が出るまで（触れた瞬間から）
   letterStep: 60,   // 1文字ずつの間隔
 } as const;
 
@@ -22,9 +21,24 @@ export function celebrationEffects(reduced: boolean): CelebrationEffects {
   return { shake: !reduced, flash: !reduced, chromatic: !reduced };
 }
 
-/** 演出が自動で消えるまでの時間（約3秒） */
+/** 演出が自動で消えるまでの時間（約3秒）。ヒットストップを無くしたぶん前へ詰めた */
 export function celebrationTotalMs() {
-  return CELEBRATION.hitStopMs + CELEBRATION.burstMs;
+  return CELEBRATION.burstMs;
+}
+
+/** キーフレームを線形補間する（Canvas と CSS transform 用） */
+export function sampleKeyframes(progress: number, input: readonly number[], output: readonly number[]) {
+  if (!(progress > input[0])) return output[0];
+  const last = input.length - 1;
+  if (progress >= input[last]) return output[last];
+  for (let i = 1; i <= last; i++) {
+    if (progress <= input[i]) {
+      const span = input[i] - input[i - 1] || 1;
+      const ratio = (progress - input[i - 1]) / span;
+      return output[i - 1] + (output[i] - output[i - 1]) * ratio;
+    }
+  }
+  return output[last];
 }
 
 const SHAKE_INPUT = [0, 0.02, 0.04, 0.07, 0.1, 0.15, 0.17, 0.19, 0.23, 0.3, 0.32, 0.35, 1];
@@ -40,8 +54,27 @@ export function shakeOutput(reduced: boolean) {
   return SHAKE_STEPS.map(step => (reduced ? 0 : step * CELEBRATION.shake));
 }
 
+const ROTATE_INPUT = [0, 0.045, 0.06, 0.075, 0.09, 0.12, 0.16, 1];
+const ROTATE_STEPS = [0, -2, 2, -1.5, 1, -0.5, 0, 0];
+
+/** 画面の揺れ（px）。CSS transform 用 */
+export function shakeAt(progress: number, reduced: boolean) {
+  return sampleKeyframes(progress, SHAKE_INPUT, shakeOutput(reduced));
+}
+
+/** 画面の傾き（度）。CSS transform 用 */
+export function rotateAt(progress: number, reduced: boolean) {
+  const values = ROTATE_STEPS.map(step => (reduced ? 0 : step));
+  return sampleKeyframes(progress, ROTATE_INPUT, values);
+}
+
+/** 画面のズーム。CSS transform 用 */
+export function zoomAt(progress: number) {
+  return sampleKeyframes(progress, [0, 0.04, 0.16, 1], [1, CELEBRATION.zoom, 1, 1]);
+}
+
 /**
- * 「とまった!!」の1文字ずつが飛び出すタイミング（burst の 0〜1 に対する割合）。
+ * 「とまった!!」の1文字ずつが飛び出すタイミング（演出の 0〜1 に対する割合）。
  * 返す値は昇順で、最後の文字も演出の終わりより前に出る。
  */
 export function letterDelays(count: number) {
