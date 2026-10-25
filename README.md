@@ -1,5 +1,7 @@
 # このゆびとまれ
 
+<p align="center"><img src="app/public/icons/icon-512.png" alt="このゆびとまれ のアプリアイコン" width="120"></p>
+
 フッ軽遊びをもっと気軽に。LINE で誘いづらい「ちょっと遊びたい」を、募集・応募の形式で解決する Web アプリです。
 
 **▶ アプリを使ってみる: https://kz2611.pages.dev**
