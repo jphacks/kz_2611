@@ -2,7 +2,20 @@
 
 フッ軽遊びをもっと気軽に。LINE で誘いづらい「ちょっと遊びたい」を、募集・応募の形式で解決する Web アプリです。
 
-<p align="center"><img src="docs/images/demo-join.gif" alt="指をスライドして参加すると「とまった!!」の演出が流れる様子" width="320"></p>
+**▶ アプリを使ってみる: https://kz2611.pages.dev**
+
+<table>
+  <tr>
+    <td align="center"><img src="docs/images/screen-create.png" alt="誘う（募集を作る）画面" width="240"></td>
+    <td align="center"><img src="docs/images/demo-join.gif" alt="指をスライドして参加すると「とまった!!」の演出が流れる様子" width="240"></td>
+    <td align="center"><img src="docs/images/screen-chat.png" alt="参加者だけのチャット" width="240"></td>
+  </tr>
+  <tr>
+    <td align="center">① 誘う</td>
+    <td align="center">② 指をスライドして参加</td>
+    <td align="center">③ 参加者だけでチャット</td>
+  </tr>
+</table>
 
 ## 製品概要
 ### 背景(製品開発のきっかけ、課題等）
@@ -76,6 +89,4 @@
 ## デモ
 https://kz2611.pages.dev
 
-![指をスライドして参加する操作の動画](docs/images/demo-join.gif)
-
-動画（MP4）: [docs/images/demo-join.mp4](docs/images/demo-join.mp4)
+参加操作の動画（MP4）: [docs/images/demo-join.mp4](docs/images/demo-join.mp4)
