@@ -1,14 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { AccessibilityInfo, Animated, Easing, Image, PanResponder, Pressable, StyleSheet, Text, View } from 'react-native';
-import Svg, { Circle, G, Path, Rect } from 'react-native-svg';
-import { C, FONT, PILL, RADIUS, T, tint, popColor } from '../../ui/theme';
-
-// 本番の演出（JoinCelebration）と同じ鳥の絵を、5枚目の参加者に使う
-const BIRDS = [
-  require('../celebration/bird_orange.png'),
-  require('../celebration/bird_blue.png'),
-  require('../celebration/bird_pink.png'),
-];
+import { AccessibilityInfo, Animated, Easing, Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import Svg, { Path } from 'react-native-svg';
+import type { EventItem } from '../../api';
+import { EventCard } from '../EventCard';
+import { Avatar } from '../../ui/Avatar';
+import { Chip } from '../../ui/Chip';
+import { TimeWheel } from '../create/TimeWheel';
+import { C, FONT, PILL, RADIUS, S, T, tint } from '../../ui/theme';
 
 export interface DemoProps {
   active: boolean;
@@ -17,11 +15,6 @@ export interface DemoProps {
   paused?: boolean;
   /** 指先が相手に触れた（参加が成立した）ときに呼ぶ */
   onTouch?: () => void;
-}
-
-// X6 の Hand の線画を再利用。色は共通テーマに合わせる。
-function Hand({ x = 0, flip = false }: { x?: number; flip?: boolean }) {
-  return <G transform={`translate(${x} 0)${flip ? ' translate(660 0) scale(-1 1)' : ''}`} fill={C.ink} stroke={flip ? C.white : C.red} strokeWidth={5} strokeLinecap="round" strokeLinejoin="round"><Path d="M-140 255 H64 V310 H-140 M88 239 H120 Q148 239 148 267 V295 Q148 323 120 323 H88 Q57 323 57 295 V267 Q57 239 88 239Z" /><Path d="M128 248 H250 A16 16 0 0 1 250 281 H111" /><Rect x={108} y={281} width={62} height={20} rx={10} /><Rect x={108} y={301} width={55} height={20} rx={10} /><Rect x={70} y={260} width={62} height={20} rx={10} /></G>;
 }
 
 export function useReducedMotion() {
@@ -53,10 +46,22 @@ function useDemoProgress(active: boolean, reduced: boolean) {
   return value;
 }
 
-function DemoCard({ title = 'カラオケ', compact = false }: { title?: string; compact?: boolean }) {
-  return <View style={[s.card, { backgroundColor: popColor(title), padding: compact ? 14 : 24 }]}>
-    <View style={s.row}><View style={[s.avatar, compact && { width: 52, height: 52 }]}><Text style={s.avatarText}>あ</Text></View><View style={{ flex: 1, gap: 5 }}><Text style={[s.cardTitle, compact && { fontSize: 24 }]}>{title}</Text><Text style={s.white}>19:00〜 · 駅前</Text><Text style={s.white}>あき・りな　2 / 3人</Text></View></View>
-    {!compact && <View style={s.time}><Text style={[s.white, { fontSize: 12 }]}>あと24分</Text></View>}
+const noop = () => {};
+const HOST = { id: 1, handle: 'aki', name: 'あき', avatar: null };
+const FRIEND = { id: 2, handle: 'rina', name: 'りな', avatar: null };
+
+/** API に接続せず、本番カード全体を説明枠に合わせて縮小する。 */
+function DemoCard({ title = 'カラオケ', joined = false, onJoin }: { title?: string; joined?: boolean; onJoin?: () => void }) {
+  const [width, setWidth] = useState(0);
+  const [created] = useState(() => Date.now() - 6 * 60_000);
+  const event: EventItem = { id: -1, title, place: '駅前', time_text: '19:00〜',
+    capacity: 3, capacity_min: 0, duration_min: 30, created_at: created,
+    expires_at: created + 30 * 60_000, group_id: null, group_name: null,
+    host: HOST, members: [FRIEND], count: 2, joined, is_host: false };
+  return <View onLayout={e => setWidth(e.nativeEvent.layout.width)} style={{ width: '100%', height: width * 580 / 660 }}>
+    {width > 0 && <View pointerEvents={onJoin ? 'auto' : 'none'} accessibilityElementsHidden={!onJoin} importantForAccessibility={onJoin ? 'auto' : 'no-hide-descendants'} style={{ width: 360, transformOrigin: 'top left', transform: [{ scale: width / 360 }] }}>
+      <EventCard event={event} onOpen={onJoin ?? noop} onJoin={onJoin ?? noop} onLeave={noop} onDelete={noop} onPressMembers={noop} />
+    </View>}
   </View>;
 }
 
@@ -67,31 +72,40 @@ export function IntroDemo({ active, reduced }: DemoProps) {
 
 export function InviteDemo({ active, reduced }: DemoProps) {
   const p = useDemoProgress(active, reduced);
-  return <View style={{ width: '100%', gap: 18 }}><View style={s.draft}><Text style={T.sub}>何して遊ぶ？</Text><Text style={T.h1}>カラオケ</Text><View style={s.row}>{['駅前', '19:00〜', '3人'].map(word => <View style={[s.tag, { backgroundColor: C.surface }]} key={word}><Text style={T.body}>{word}</Text></View>)}</View></View><Animated.View style={{ opacity: p.interpolate({ inputRange: [0, .6, 1], outputRange: [.25, 1, 1] }), transform: [{ translateY: p.interpolate({ inputRange: [0, 1], outputRange: [26, 0] }) }, { scale: p.interpolate({ inputRange: [0, 1], outputRange: [.94, 1] }) }] }}><DemoCard /></Animated.View><View style={s.published}><Text style={[s.white, { fontSize: 16 }]}>みんなを誘う →</Text></View></View>;
+  // CreateScreen は API 取得があるのでマウントせず、テーマと表示部品を流用する。
+  return <Animated.View style={{ width: '100%', gap: 10, opacity: p.interpolate({ inputRange: [0, 1], outputRange: [.6, 1] }) }}>
+    <View pointerEvents="none" style={{ gap: 10, backgroundColor: C.white, borderRadius: RADIUS, padding: 14 }}>
+      <Text style={T.h2}>やること</Text><Text style={[S.input, { fontSize: 22, fontWeight: '800' }]}>カラオケ</Text>
+      <Text style={T.h2}>場所<Text style={T.sub}>　任意</Text></Text><Text style={S.input}>駅前</Text>
+      <Text style={T.h2}>時間</Text><TimeWheel value={{ hour: 19, minute: 0 }} onChange={noop} />
+      <Text style={T.h2}>人数<Text style={T.sub}>　あなたを含めて</Text></Text><Text style={T.h2}>2〜3人</Text>
+      {[2, 3].map((n, i) => <View key={n} style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: C.surface, borderRadius: RADIUS, paddingHorizontal: 16, paddingVertical: 8 }}><Text style={T.body}>{i ? '上限' : '下限'}</Text><View style={s.step}><Text style={T.h1}>−</Text></View><Text style={T.h1}>{n}人</Text><View style={s.step}><Text style={T.h1}>＋</Text></View></View>)}
+      <Text style={T.h2}>表示時間</Text><View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>{[15, 30, 60, 120].map(m => <Chip key={m} label={`${m}分`} on={m === 30} onPress={noop} />)}</View>
+      <Text style={T.h2}>公開先</Text><View style={s.row}><Chip label="全体" on onPress={noop} /></View>
+      <View style={S.btnRed}><Text style={S.btnText}>公開する</Text></View>
+    </View>
+  </Animated.View>;
 }
 
 export function BoardDemo({ active, reduced }: DemoProps) {
   const p = useDemoProgress(active, reduced);
-  return <View style={{ width: '100%', gap: 12 }}><View style={[s.row, { justifyContent: 'space-between' }]}><Text style={T.h1}>掲示板</Text><Text style={T.sub}>友達の募集</Text></View>{['カラオケ', 'ラーメン', '夜ドライブ'].map((title, i) => <Animated.View key={title} style={{ opacity: p.interpolate({ inputRange: [0, .25 + i * .2, 1], outputRange: [0, .55, 1] }), transform: [{ translateY: p.interpolate({ inputRange: [0, 1], outputRange: [45 + i * 20, 0] }) }] }}><DemoCard title={title} compact /></Animated.View>)}</View>;
+  return <View style={{ width: '100%', gap: 12 }}><View style={[s.row, { justifyContent: 'space-between' }]}><Text style={T.h1}>掲示板</Text><Text style={T.sub}>友達の募集</Text></View><View pointerEvents="none" style={s.row}><Chip label="全体" on onPress={noop} /></View>{['カラオケ', 'ラーメン', '夜ドライブ'].map((title, i) => <Animated.View key={title} style={{ opacity: p.interpolate({ inputRange: [0, .25 + i * .2, 1], outputRange: [0, .55, 1] }), transform: [{ translateY: p.interpolate({ inputRange: [0, 1], outputRange: [45 + i * 20, 0] }) }] }}><DemoCard title={title} /></Animated.View>)}</View>;
 }
 
 const SLIDE_TOUCH = 0.94;
 
 export function SlideDemo({ active, reduced, paused = false, onTouch }: DemoProps) {
   const value = useRef(new Animated.Value(0)).current;
-  // アニメーションの値は listener で読む（0〜1）
-  const progress = useRef(0);
   const [shown, setShown] = useState(0);
   const [dragging, setDragging] = useState(false);
   const touched = useRef(false);
   const loop = useRef<Animated.CompositeAnimation | null>(null);
-  const dragStart = useRef(0);
-  // 親が毎回新しい関数を渡しても PanResponder を作り直さない
+  // 親が毎回新しい関数を渡しても、自動デモからは最新の通知先を呼ぶ
   const touchRef = useRef(onTouch);
   touchRef.current = onTouch;
 
   useEffect(() => {
-    const id = value.addListener(({ value: next }) => { progress.current = next; setShown(next); });
+    const id = value.addListener(({ value: next }) => setShown(next));
     return () => value.removeListener(id);
   }, [value]);
 
@@ -126,50 +140,47 @@ export function SlideDemo({ active, reduced, paused = false, onTouch }: DemoProp
     return () => { value.removeListener(id); sequence.stop(); loop.current = null; };
   }, [active, reduced, paused, dragging, value]);
 
-  // 自分でスライドした場合も、指先が触れた時点で参加にする
-  const pan = useRef(PanResponder.create({
-    onStartShouldSetPanResponder: () => false,
-    onMoveShouldSetPanResponder: (_event, gesture) => gesture.dx > 8 && gesture.dx > Math.abs(gesture.dy),
-    onPanResponderGrant: () => { dragStart.current = progress.current; setDragging(true); },
-    onPanResponderMove: (_event, gesture) => {
-      value.setValue(Math.max(0, Math.min(1, dragStart.current + gesture.dx / 140)));
-    },
-    onPanResponderRelease: () => {
-      setDragging(false);
-      if (progress.current > SLIDE_TOUCH) hitRef.current();
-      touched.current = progress.current > SLIDE_TOUCH;
-    },
-    onPanResponderTerminate: () => setDragging(false),
-  })).current;
-
-  return <View style={{ width: '100%', gap: 20 }}><View style={[s.card, { backgroundColor: C.ink, padding: 0, overflow: 'hidden' }]}><View style={{ padding: 24, gap: 6 }}><Text style={[s.white, { color: C.red, fontSize: 12 }]}>参加のデモ</Text><Text style={s.cardTitle}>カラオケ</Text><Text style={s.white}>19:00〜 · 駅前　2 / 3人</Text></View>
+  return <View style={{ width: '100%', gap: 20 }}>
+    <Text style={[T.small, { color: C.red }]}>参加のデモ</Text>
     <Pressable accessibilityRole="button" accessibilityLabel="左の指を右へスライドして参加（タップでも参加できます）" onPress={hit}>
-      <View {...pan.panHandlers}>
-        <Svg width="100%" height={150} viewBox="0 140 660 230"><Hand x={shown * 64} /><Hand x={-shown * 64} flip />{shown > .95 && <Circle cx={330} cy={265} r={13} fill={C.yellow} />}</Svg>
-      </View>
+      <View onTouchStart={() => setDragging(true)} onTouchEnd={() => setDragging(false)} onTouchCancel={() => setDragging(false)}><DemoCard joined={shown > SLIDE_TOUCH} onJoin={hit} /></View>
     </Pressable>
-    <View style={{ paddingHorizontal: 24, paddingBottom: 24 }}><Text style={[s.white, { color: C.red }]}>指を右へスライド →</Text></View></View><View style={s.tag}><Text style={[T.h2, { color: C.blue }]}>{shown > .95 ? 'タッチ！ 参加できた' : 'あなたの指 → 友達の指'}</Text></View></View>;
+    <View style={s.tag}><Text style={[T.h2, { color: C.blue }]}>{shown > .95 ? 'タッチ！ 参加できた' : 'あなたの指 → 友達の指'}</Text></View>
+  </View>;
 }
 
 export function ChatDemo({ active, reduced }: DemoProps) {
   const p = useDemoProgress(active, reduced);
-  return <View style={{ width: '100%', gap: 20 }}><View style={s.row}>{[0, 1, 2].map(i => <Animated.Image key={i} source={BIRDS[i]} resizeMode="contain" style={{ width: 58, height: 58, transform: [{ translateY: p.interpolate({ inputRange: [0, 1], outputRange: [i % 2 ? 10 : -10, 0] }) }] }} />)}<Text style={[T.h2, { color: C.red }]}>3 / 3人</Text></View><Text style={[T.huge, { color: C.red, fontSize: 40 }]}>とまった!!</Text><View style={s.chat}><Text style={[T.sub, { textAlign: 'center', marginBottom: 8 }]}>参加者だけのチャット</Text><View style={[s.bubble, { backgroundColor: tint(0), alignSelf: 'flex-start' }]}><Text style={T.body}>駅前で集合しよう！</Text></View><Animated.View style={[s.bubble, { backgroundColor: C.blue, alignSelf: 'flex-end', opacity: p.interpolate({ inputRange: [0, 1], outputRange: [.3, 1] }) }]}><Text style={s.white}>今から行くね！</Text></Animated.View><View style={[s.bubble, { backgroundColor: tint(3), alignSelf: 'flex-start' }]}><Text style={T.body}>楽しみ！</Text></View></View></View>;
+  // ChatSheet はポーリングを持つため、同じテーマ・Avatar・吹き出しで表示だけ行う。
+  return <View style={{ width: '100%', gap: 16 }}>
+    <Text style={[T.sub, { textAlign: 'center' }]}>参加者だけのチャット</Text>
+    <View style={{ backgroundColor: C.white, borderRadius: RADIUS, overflow: 'hidden' }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 10, gap: 10, borderBottomWidth: 1, borderColor: C.line }}>
+        <View style={{ flexDirection: 'row' }}>{[HOST, FRIEND].map((user, i) => <View key={user.id} style={{ marginLeft: i ? -7 : 0 }}><Avatar user={user} size={28} /></View>)}</View>
+        <Text numberOfLines={1} style={[T.h2, { flex: 1 }]}>カラオケ</Text><Text style={T.h2}>⋯</Text><View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: C.surface, alignItems: 'center', justifyContent: 'center' }}><Text style={[T.h2, { color: C.muted, fontSize: 16 }]}>×</Text></View>
+      </View>
+      <View style={{ padding: 16, gap: 14 }}>
+        {['駅前で集合しよう！', '今から行くね！', '楽しみ！'].map((body, i) => {
+          const mine = i === 1;
+          return <Animated.View key={body} style={{ flexDirection: 'row', gap: 8, alignSelf: mine ? 'flex-end' : 'flex-start', maxWidth: '88%', alignItems: 'flex-end', opacity: mine ? p.interpolate({ inputRange: [0, 1], outputRange: [.3, 1] }) : 1 }}>
+            {!mine && <Avatar user={i ? FRIEND : HOST} size={26} />}
+            <View style={{ flexShrink: 1, gap: 4 }}>{!mine && <Text style={T.small}>{i ? FRIEND.name : HOST.name}</Text>}
+              <View style={{ backgroundColor: mine ? C.blue : tint(i ? FRIEND.id : HOST.id), borderRadius: 20, borderBottomRightRadius: mine ? 6 : 20, borderBottomLeftRadius: mine ? 20 : 6, paddingHorizontal: 14, paddingVertical: 10 }}><Text style={[T.body, { color: mine ? C.white : C.ink, fontWeight: '600' }]}>{body}</Text></View>
+            </View>
+          </Animated.View>;
+        })}
+      </View>
+      <View style={{ flexDirection: 'row', alignItems: 'flex-end', padding: 14, gap: 8 }}><Text style={[S.input, { flex: 1, borderRadius: 24, color: C.muted }]}>メッセージ</Text><View style={{ backgroundColor: C.red, width: 48, height: 48, borderRadius: 24, alignItems: 'center', justifyContent: 'center', opacity: .5 }}><Svg width={22} height={22} viewBox="0 0 24 24"><Path d="M4 11 L20 4 L14 20 L11 13 Z M11 13 L20 4" stroke={C.white} strokeWidth={1.5} fill="none" /></Svg></View></View>
+    </View>
+  </View>;
 }
 
 const s = StyleSheet.create({
+  step: { width: 52, height: 52, borderRadius: 26, alignItems: 'center', justifyContent: 'center', backgroundColor: C.white },
+  white: { fontFamily: FONT, fontSize: 14, fontWeight: '700', color: C.white },
   center: { alignItems: 'center', justifyContent: 'center', width: '100%' },
   logo: { width: 176, height: 176, borderRadius: 44 },
   tags: { flexDirection: 'row', gap: 8, marginTop: 20 },
   tag: { borderRadius: PILL, paddingHorizontal: 16, paddingVertical: 10, alignItems: 'center', justifyContent: 'center' },
   row: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  card: { borderRadius: RADIUS, gap: 16 },
-  cardTitle: { fontFamily: FONT, fontSize: 28, fontWeight: '900', color: C.white },
-  white: { fontFamily: FONT, fontSize: 14, fontWeight: '700', color: C.white },
-  avatar: { width: 62, height: 62, borderRadius: PILL, borderWidth: 5, borderColor: C.white, backgroundColor: C.ink, alignItems: 'center', justifyContent: 'center' },
-  avatarText: { fontFamily: FONT, color: C.white, fontSize: 24, fontWeight: '900' },
-  time: { backgroundColor: C.ink, paddingHorizontal: 12, paddingVertical: 7, borderRadius: PILL, alignSelf: 'flex-end' },
-  draft: { borderRadius: RADIUS, padding: 22, gap: 12, backgroundColor: C.bg },
-  published: { backgroundColor: C.red, borderRadius: PILL, alignItems: 'center', padding: 16 },
-  chat: { backgroundColor: C.bg, padding: 20, borderRadius: RADIUS, gap: 14 },
-  bubble: { borderRadius: RADIUS, paddingHorizontal: 16, paddingVertical: 14 },
 });
