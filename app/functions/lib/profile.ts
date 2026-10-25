@@ -1,4 +1,5 @@
 import { Route, HttpError, json, str, int, isFriend, PUBLIC_USER, User } from './core';
+import { validateAvatar } from './avatar';
 
 export const profileRoutes: Route[] = [
   { method: 'PATCH', path: /^\/me$/, handler: async ({ env, me, body }) => {
@@ -10,11 +11,8 @@ export const profileRoutes: Route[] = [
       values.push(str(b.name, '名前', 1, 20));
     }
     if ('avatar' in b) {
-      if (b.avatar !== null && (typeof b.avatar !== 'string' || !b.avatar.startsWith('data:image/') || b.avatar.length > 280000)) {
-        throw new HttpError(400, '画像は200KB以内の画像data URLにしてください');
-      }
       changes.push('avatar = ?');
-      values.push(b.avatar as string | null);
+      values.push(validateAvatar(b.avatar));
     }
     if (changes.length) await env.DB.prepare(`UPDATE users SET ${changes.join(', ')} WHERE id = ?`).bind(...values, me.id).run();
     const user = await env.DB.prepare(`SELECT ${PUBLIC_USER}, invite_code FROM users WHERE id = ?`).bind(me.id).first();

@@ -38,12 +38,11 @@ expect('本人', request('GET', f"/users/{alice['id']}", a)['is_friend'], False)
 expect('友達', request('GET', f"/users/{bob['id']}", a)['is_friend'], True)
 public(request('GET', f"/users/{bob['id']}", a)['user'])
 request('GET', '/users/99999999', a, status=404)
-for body in ({'name': ''}, {'name': 'x' * 21}, {'name': None}, {'avatar': 3}, {'avatar': 'https://example.com/x'}, {'avatar': 'data:text/plain,x'}, {'avatar': 'data:image/png;base64,' + 'A' * 280000}):
+for body in ({'name': ''}, {'name': 'x' * 21}, {'name': None}, {'avatar': 3}, {'avatar': 'https://example.com/x'}, {'avatar': 'data:text/plain,x'}):
     request('PATCH', '/me', a, body, 400)
-image = 'data:image/png;base64,' + 'A' * (280000 - len('data:image/png;base64,'))
-updated = request('PATCH', '/me', a, {'name': ' Zed ', 'avatar': image})['user']
+# 画像の形式・大きさの検証は #131 で test_profile.py に移した
+updated = request('PATCH', '/me', a, {'name': ' Zed '})['user']
 expect('名前の更新', updated['name'], 'Zed')
-expect('画像の上限', len(updated['avatar']), 280000)
 expect('招待コード維持', updated['invite_code'], alice['invite_code'])
 expect('保存確認', request('GET', '/me', a)['user'], updated)
 expect('画像削除', request('PATCH', '/me', a, {'avatar': None})['user']['avatar'], None)
