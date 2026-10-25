@@ -8,7 +8,7 @@ export const TIMELINE = {
  wave2: 196,
  wave3: 280,
  impact: [38],
- barrage: [18, 22, 16, 24, 22],
+ barrage: [18, 12, 12, 12, 16],
  wave: [14, 24, 9],
  cancel: [12],
 } as const;
