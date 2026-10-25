@@ -1,17 +1,16 @@
 // #98 参加が成立した瞬間の演出（Web）。粒は Canvas 1枚、揺れ・ズームは CSS transform。
-// 見た目・量・音・振動は #93 と同じ。ヒットストップ（約150msの硬直）だけを無くした。
+// #127 振動は演出ではなく、掲示板の参加確定操作内で開始する。
 import { useCallback, useEffect, useRef, useState, type ComponentRef } from 'react';
 import { AccessibilityInfo, Animated, Easing, Pressable, StyleSheet, Text, View, type LayoutChangeEvent } from 'react-native';
 import { C, FONT } from '../../ui/theme';
 import { preloadBirdImages } from './birds';
 import { startCelebrationCanvas, type CelebrationCanvasHandle } from './canvasEngine';
-import { playCelebrationSound, playHitSound, vibratePattern } from './feedback';
+import { playCelebrationSound, playHitSound } from './feedback';
 import { useReducedMotion } from './reducedMotion';
 import { CELEBRATION, celebrationEffects, celebrationTotalMs, letterDelays } from './timing';
 
 const WORD = 'とまった!!';
-// 触れた瞬間の振動から、間を空けずに爆発の連打へ続ける
-const HAPTIC = { immediate: [30, 20, 35, 20, 40, 25, 60], wave: 18 } as const;
+// 振動は参加操作の同期処理で送る。演出からの再要求で上書きしない。
 
 export interface JoinCelebrationProps {
   visible: boolean;
@@ -52,7 +51,6 @@ export function JoinCelebrationWeb({ visible, onDone, sound, vibrate }: JoinCele
     finished.current = true;
     clearTimers();
     stopEngine();
-    vibratePattern(0);
     burst.stopAnimation();
     doneRef.current();
   }, [clearTimers, stopEngine, burst]);
@@ -79,14 +77,11 @@ export function JoinCelebrationWeb({ visible, onDone, sound, vibrate }: JoinCele
     if (!visible) return;
 
     const enabled = settings.current;
-    vibratePattern([...HAPTIC.immediate], enabled.vibrate);
     playHitSound(enabled.sound);
     playCelebrationSound(enabled.sound);
     AccessibilityInfo.announceForAccessibility?.('参加が成立しました');
 
     // 約3秒で自動で消える（ヒットストップの分だけ前へ詰めた）
-    timers.current.push(setTimeout(() => vibratePattern(HAPTIC.wave, enabled.vibrate), 420));
-    timers.current.push(setTimeout(() => vibratePattern(HAPTIC.wave, enabled.vibrate), 840));
     timers.current.push(setTimeout(() => {
       if (active.current) finish();
     }, celebrationTotalMs()));

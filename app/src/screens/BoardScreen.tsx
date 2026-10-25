@@ -8,7 +8,7 @@ import { EventCard } from '../components/EventCard';
 import { compareBoardEvents } from '../components/board/eventOrder';
 import { JoinCelebration } from '../components/celebration/JoinCelebration';
 import { preloadBirdImages } from '../components/celebration/birds';
-import { prepareCelebrationSound } from '../components/celebration/feedback';
+import { prepareCelebrationSound, startJoinHaptic } from '../components/celebration/feedback';
 import { useCelebrateSettings } from '../components/celebration/settings';
 import { ParticipantsSheet } from '../components/ParticipantsSheet';
 import { errMsg, usePolling } from '../lib/util';
@@ -36,6 +36,7 @@ export function BoardScreen(p: ScreenProps) {
   const joiningRef = useRef(false);
   const deletingRef = useRef(false);
   const active = useRef(true);
+  const stopHaptic = useRef<() => void>(() => {});
   const selected = useRef(group);
   selected.current = group;
   const request = useRef(0);
@@ -43,7 +44,7 @@ export function BoardScreen(p: ScreenProps) {
     active.current = true;
     // 参加の演出で使う鳥の画像を、参加する前に読み込んでおく（#98）
     preloadBirdImages();
-    return () => { active.current = false; };
+    return () => { active.current = false; stopHaptic.current(); };
   }, []);
   useEffect(() => {
     if (p.openEventId !== undefined) { setChatId(p.openEventId); p.clearNav(); }
@@ -75,8 +76,10 @@ export function BoardScreen(p: ScreenProps) {
   const join = useCallback(async (event: EventItem) => {
     if (joiningRef.current) return;
     joiningRef.current = true; setJoining(event.id); setActionError('');
-    // Safari でも鳴らせるように、スワイプの操作の中で音の準備だけしておく
-    prepareCelebrationSound(celebrate.sound);
+    // release の同期処理内で開始し、API の遅延と振動のタイミングを切り離す。
+    // 保存済みのオフを読み終えるまでは鳴らさない。
+    stopHaptic.current = startJoinHaptic(celebrate.ready && celebrate.vibrate);
+    prepareCelebrationSound(celebrate.ready && celebrate.sound);
     try {
       const result = await api<{ event: EventItem }>(`/events/${event.id}/join`, { method: 'POST' });
       if (active.current) {
@@ -87,10 +90,11 @@ export function BoardScreen(p: ScreenProps) {
         setCelebration(true);
       }
     } catch (e) {
+      stopHaptic.current();
       if (active.current) setActionError(errMsg(e));
       void refresh().catch(() => {});
     } finally { joiningRef.current = false; if (active.current) setJoining(null); }
-  }, [celebrate.sound]);
+  }, [celebrate.sound, celebrate.vibrate, celebrate.ready]);
   const leave = useCallback(async (event: EventItem) => {
     if (joiningRef.current || event.is_host || !event.joined) return;
     joiningRef.current = true; setLeaving(event.id); setActionError('');
