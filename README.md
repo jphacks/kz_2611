@@ -1,6 +1,13 @@
 # このゆびとまれ
 
 <p align="center"><img src="app/public/icons/icon-512.png" alt="このゆびとまれ のアプリアイコン" width="120"></p>
+<p align="center">
+  <img src="https://img.shields.io/badge/TypeScript-3178C6?style=flat&logo=typescript&logoColor=white" alt="TypeScript">
+  <img src="https://img.shields.io/badge/Expo-000020?style=flat&logo=expo&logoColor=white" alt="Expo">
+  <img src="https://img.shields.io/badge/React_Native_Web-61DAFB?style=flat&logo=react&logoColor=white" alt="React Native Web">
+  <img src="https://img.shields.io/badge/Cloudflare_Pages-F38020?style=flat&logo=cloudflarepages&logoColor=white" alt="Cloudflare Pages">
+  <img src="https://img.shields.io/badge/Cloudflare_D1-F38020?style=flat&logo=cloudflare&logoColor=white" alt="Cloudflare D1">
+</p>
 
 フッ軽遊びをもっと気軽に。LINE で誘いづらい「ちょっと遊びたい」を、募集・応募の形式で解決する Web アプリです。
 
