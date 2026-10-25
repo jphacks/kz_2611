@@ -19,6 +19,22 @@ async function requireParticipant(c: Ctx, eventId: number) {
   if (!event) throw new HttpError(403, '参加者だけがチャットを利用できます');
 }
 
+// トーク一覧の1ページ。終了したイベントも含むので、履歴が増えても応答を抑える（#136）。
+const TALKS_LIMIT = 50;
+type TalksCursor = { at: number; messageId: number; eventId: number };
+/** 並び順（最新メッセージの時刻・ID・イベントID）をそのまま次のページの位置にする */
+const talksCursor = (at: number, messageId: number, eventId: number) => `${at}:${messageId}:${eventId}`;
+function parseTalksCursor(v: string | null): TalksCursor | null {
+  if (v === null) return null;
+  const parts = v.split(':');
+  if (parts.length !== 3) throw new HttpError(400, 'before の形式が正しくありません');
+  return {
+    at: int(parts[0], 'before', 0, Number.MAX_SAFE_INTEGER),
+    messageId: int(parts[1], 'before', 0, Number.MAX_SAFE_INTEGER),
+    eventId: int(parts[2], 'イベントID', 1, Number.MAX_SAFE_INTEGER),
+  };
+}
+
 export const chatRoutes: Route[] = [
   { method: 'GET', path: /^\/events\/(\d+)\/messages$/, handler: async c => {
     const eventId = int(c.params[0], 'イベントID', 1, Number.MAX_SAFE_INTEGER);
@@ -42,20 +58,41 @@ export const chatRoutes: Route[] = [
     return json({ message: message(row!) }, 201);
   } },
   { method: 'GET', path: /^\/talks$/, handler: async c => {
-    const { results } = await c.env.DB.prepare(`SELECT e.*, g.name AS group_name, ${userCols('h', 'host_')},
-      m.id AS message_id, m.event_id, m.kind, m.body, m.created_at AS message_created_at,
-      ${userCols('u', 'user_')}
-      FROM events e JOIN users h ON h.id = e.host_id LEFT JOIN groups g ON g.id = e.group_id
-      LEFT JOIN messages m ON m.id = (SELECT last.id FROM messages last WHERE last.event_id = e.id ORDER BY last.id DESC LIMIT 1)
-      LEFT JOIN users u ON u.id = m.user_id
-      WHERE ${participantSql}
-      ORDER BY COALESCE(m.created_at, e.created_at) DESC, COALESCE(m.id, 0) DESC, e.id DESC`)
-      .bind(c.me.id, c.me.id).all<EventItemRow>();
+    const rawLimit = c.url.searchParams.get('limit');
+    const limit = rawLimit === null ? TALKS_LIMIT : int(rawLimit, '件数', 1, TALKS_LIMIT);
+    const before = parseTalksCursor(c.url.searchParams.get('before'));
+    // 主催と参加の候補IDを先に絞ってからイベントを引く（全イベント走査を避ける）。
+    // 過去ページは並び順の3項目より小さい行だけを返すので、同時刻でも重複・欠落しない。
+    const after = before === null ? '' : `WHERE latest.sort_at < ? OR (latest.sort_at = ? AND latest.sort_id < ?)
+      OR (latest.sort_at = ? AND latest.sort_id = ? AND latest.id < ?)`;
+    const binds = before === null ? [] : [before.at, before.at, before.messageId, before.at, before.messageId, before.eventId];
+    const { results } = await c.env.DB.prepare(`WITH mine AS (
+        SELECT e.id AS event_id FROM events e WHERE e.host_id = ?
+        UNION
+        SELECT em.event_id FROM event_members em WHERE em.user_id = ?
+      ), latest AS (
+        SELECT e.*, m.id AS message_id, m.event_id, m.kind, m.body,
+          m.created_at AS message_created_at, m.user_id AS message_user_id,
+          COALESCE(m.created_at, e.created_at) AS sort_at, COALESCE(m.id, 0) AS sort_id
+        FROM mine JOIN events e ON e.id = mine.event_id
+        LEFT JOIN messages m ON m.id = (SELECT last.id FROM messages last WHERE last.event_id = e.id ORDER BY last.id DESC LIMIT 1)
+      )
+      SELECT latest.*, g.name AS group_name, ${userCols('h', 'host_')}, ${userCols('u', 'user_')}
+      FROM latest JOIN users h ON h.id = latest.host_id
+      LEFT JOIN groups g ON g.id = latest.group_id
+      LEFT JOIN users u ON u.id = latest.message_user_id
+      ${after}
+      ORDER BY latest.sort_at DESC, latest.sort_id DESC, latest.id DESC
+      LIMIT ?`)
+      .bind(c.me.id, c.me.id, ...binds, limit + 1).all<EventItemRow & Row>();
+    // 1件多く取って、続きの有無を判定する。
+    const page = results.slice(0, limit);
+    const last = page[page.length - 1];
     const at = now();
-    const events = await eventItems(c, results);
-    const talks = results.map((row, i) => ({ event: events[i],
+    const events = await eventItems(c, page);
+    const talks = page.map((row, i) => ({ event: events[i],
       last: row.message_id == null ? null : message({ ...row, created_at: row.message_created_at }),
       active: Number(row.expires_at) > at }));
-    return json({ talks });
+    return json({ talks, next: results.length > limit ? talksCursor(Number(last.sort_at), Number(last.sort_id), Number(last.id)) : null });
   } },
 ];

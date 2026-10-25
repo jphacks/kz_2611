@@ -48,7 +48,7 @@
 参加者（主催者を含む）だけ。それ以外は 403。
 | GET | /events/:id/messages?after=<id> | — | { messages: Message[] }（id の昇順、最大200件） |
 | POST | /events/:id/messages | body(1-500) | 201 { message } |
-| GET | /talks | — | { talks: Talk[] }（自分が主催・参加したイベント。終了したものも。最新メッセージが新しい順） |
+| GET | /talks?limit=<1-50>&before=<cursor> | — | { talks: Talk[], next: string \| null }（自分が主催・参加したイベント。終了したものも。最新メッセージが新しい順。1ページ最大50件で、既定は50。next が null なら最後。続きは before に next を渡す。#136） |
 
 ## 通知・Web Push（担当: functions/lib/notify.ts、暗号化は functions/lib/push.ts）（#87）
 鍵は Pages の secret `VAPID_PUBLIC_KEY`（base64url の非圧縮公開鍵）・`VAPID_PRIVATE_KEY`（base64url の d）・任意で `VAPID_SUBJECT`（mailto: か https:）。本番には設定済みなので、デプロイのたびに設定し直す必要はない。手元で実際に送るときだけ `app/.dev.vars`（git に入れない）に置く。
