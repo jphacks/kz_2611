@@ -1,6 +1,6 @@
 import { TIMELINE, useHaptics, vibrationSupported } from './haptics';
 import React, { useEffect, useRef, useState } from 'react';
-import { Animated, Image, PanResponder, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Animated, Easing, Image, PanResponder, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Svg, { Path, Ellipse, Circle } from 'react-native-svg';
 
 const ORANGE = '#FF5A36';
@@ -49,7 +49,7 @@ function Card({kind,muted,hapticOn}:{kind:number;muted:boolean;hapticOn:boolean}
  const travel=kind===0?width*.06:width*.0584;
  const travelRef=useRef(travel);travelRef.current=travel;
  const sceneRef=useRef<React.ElementRef<typeof View>>(null);const [origin,setOrigin]=useState({x:44,y:73});const [celebrating,setCelebrating]=useState(false);const timer=useRef<ReturnType<typeof setTimeout>|null>(null);useEffect(()=>()=>{if(timer.current)clearTimeout(timer.current)},[]);
- const commit=(yes:boolean)=>{if(yes===active.current)return;active.current=yes;setJoined(yes);if(timer.current)clearTimeout(timer.current);burst.stopAnimation();if(yes){sceneRef.current?.measureInWindow((a,b,w,h)=>setOrigin({x:(a+w*.408)/window.innerWidth*100,y:(b+h*.5)/window.innerHeight*100}));sound(mute.current);haptics.join();setCelebrating(true);burst.setValue(0);Animated.timing(burst,{toValue:1,duration:TIMELINE.duration,useNativeDriver:true}).start();timer.current=setTimeout(()=>setCelebrating(false),2950);}else{haptics.cancel();setCelebrating(false);burst.setValue(0);}};
+ const commit=(yes:boolean)=>{if(yes===active.current)return;active.current=yes;setJoined(yes);if(timer.current)clearTimeout(timer.current);burst.stopAnimation();if(yes){sceneRef.current?.measureInWindow((a,b,w,h)=>setOrigin({x:(a+w*.408)/window.innerWidth*100,y:(b+h*.5)/window.innerHeight*100}));sound(mute.current);haptics.join();setCelebrating(true);burst.setValue(0);Animated.timing(burst,{toValue:1,duration:TIMELINE.duration,easing:Easing.linear,useNativeDriver:true}).start();timer.current=setTimeout(()=>setCelebrating(false),2950);}else{haptics.cancel();setCelebrating(false);burst.setValue(0);}};
  const responder=useRef(PanResponder.create({onStartShouldSetPanResponder:()=>true,onMoveShouldSetPanResponder:(_,g)=>Math.abs(g.dx)>Math.abs(g.dy),onPanResponderGrant:()=>{base.current=pos.current;haptics.reset();},onPanResponderMove:(_,g)=>{if(Math.abs(g.dy)>Math.abs(g.dx))return;const t=travelRef.current;const next=Math.max(0,Math.min(t,base.current+g.dx*.3));pos.current=next;x.setValue(next);if(!active.current)haptics.approach(next/t);setProgress(next/t);if(next>=t*.97)commit(true);else if(base.current>=t*.97&&next<=t*.1)commit(false);},onPanResponderRelease:()=>{const t=travelRef.current;const yes=pos.current>=t*.97;pos.current=yes?t:0;setProgress(yes?1:0);Animated.spring(x,{toValue:pos.current,useNativeDriver:true,bounciness:9}).start();commit(yes);},onPanResponderTerminationRequest:()=>true})).current;
  const names=['指がふれたら、天地創造。','夜にふれる、創造の線。','指先から、世界がポップ。'];
  return <View style={s.section}><Text style={s.eyebrow}>X2-{['A','B','C'][kind]} / {['ORIGINAL FRESCO','MIDNIGHT DRAWING','COLOR POP'][kind]}</Text><Text style={s.sectionTitle}>{names[kind]}</Text><Text style={s.desc}>{['右へスライド。神々しい祝福を、その指先から。','黒 × 白 × 橙。静かな予兆から、まぶしい火花へ。','大きな腕と顔。タッチした瞬間、ハートがはじける。'][kind]}</Text>
