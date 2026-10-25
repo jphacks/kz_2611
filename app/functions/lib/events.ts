@@ -1,5 +1,6 @@
 import { Ctx, Route, HttpError, json, str, int, now, visibleSql } from './core';
 import { item, eventItems, eventItemSql, EventItemRow as EventRow } from './eventItem';
+import { notifyEventCreated, notifyJoined } from './notify';
 
 async function find(c: Ctx, visible = true): Promise<EventRow> {
   const row = await c.env.DB.prepare(`SELECT e.* FROM events e WHERE e.id = ? ${visible ? `AND ${visibleSql(c.me.id)}` : ''}`)
@@ -50,7 +51,9 @@ export const eventRoutes: Route[] = [
       (host_id, group_id, title, place, time_text, capacity, capacity_min, duration_min, expires_at, created_at)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`).bind(c.me.id, v.group_id, v.title, v.place, v.time_text,
         v.capacity, v.capacity_min, v.duration_min, at + v.duration_min * 60000, at).run();
-    return json({ event: await item(c, r.meta.last_row_id) }, 201);
+    const event = await item(c, r.meta.last_row_id);
+    notifyEventCreated(c, event);
+    return json({ event }, 201);
   } },
   { method: 'PATCH', path: /^\/events\/(\d+)$/, handler: async c => {
     const e = await owned(c), v = await input(c, e);
@@ -78,7 +81,7 @@ export const eventRoutes: Route[] = [
     if (e.expires_at <= at) throw new HttpError(400, '募集は終了しています');
     if (e.host_id === c.me.id) return json({ event: await item(c, e.id) });
     // 参加・通知・満員終了を同じトランザクションで行い、直前の changes() で重複を防ぐ。
-    await c.env.DB.batch([
+    const [added, , full] = await c.env.DB.batch([
       c.env.DB.prepare(`INSERT OR IGNORE INTO event_members (event_id, user_id, joined_at)
         SELECT id, ?, ? FROM events e WHERE id = ? AND ${visibleSql(c.me.id)}
         AND (SELECT COUNT(*) FROM event_members WHERE event_id = ?) + 1 < capacity AND expires_at > ?`)
@@ -91,9 +94,11 @@ export const eventRoutes: Route[] = [
       c.env.DB.prepare(`INSERT INTO messages (event_id, user_id, kind, body, created_at)
         SELECT ?, ?, 'system', ?, ? WHERE changes() > 0`)
         .bind(e.id, c.me.id, '人数がそろったので募集を終了しました', at),
-    ]);
+    ]) as { meta?: { changes?: number } }[];
     const event = await item(c, e.id);
     if (!event.joined) throw new HttpError(400, '定員に達しているか、募集が終了しています');
+    // 新しく参加できたときだけ通知する（参加済みの再送では送らない）
+    if (added?.meta?.changes) notifyJoined(c, event, !!full?.meta?.changes);
     return json({ event });
   } },
   { method: 'DELETE', path: /^\/events\/(\d+)\/join$/, handler: async c => {

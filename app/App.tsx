@@ -12,6 +12,11 @@ if (Platform.OS === 'web' && typeof document !== 'undefined' && !document.getEle
   const vp = document.querySelector('meta[name="viewport"]');
   if (vp) vp.setAttribute('content', 'width=device-width, initial-scale=1, viewport-fit=cover');
   const tc = document.createElement('meta'); tc.name = 'theme-color'; tc.content = '#FFFFFF'; document.head.appendChild(tc);
+  // #87 ホーム画面に追加して通知を受け取るための manifest とアイコン（iPhone は apple-touch-icon）
+  for (const [rel, href] of [['manifest', '/manifest.webmanifest'], ['apple-touch-icon', '/apple-touch-icon.png']]) {
+    const link = document.createElement('link'); link.rel = rel; link.href = href; document.head.appendChild(link);
+  }
+  const title = document.createElement('meta'); title.name = 'apple-mobile-web-app-title'; title.content = 'このゆびとまれ'; document.head.appendChild(title);
 }
 
 export default function App() {
