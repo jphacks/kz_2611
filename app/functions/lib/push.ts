@@ -110,7 +110,7 @@ export async function vapidAuthorization(endpoint: string, keys: VapidKeys, nowM
   return `vapid t=${unsigned}.${b64urlEncode(sig)}, k=${keys.publicKey}`;
 }
 
-type Fetch = (url: string, init: RequestInit) => Promise<{ status: number }>;
+type Fetch = (url: string, init: RequestInit) => Promise<{ status: number; body?: ReadableStream<Uint8Array> | null }>;
 /** 1つの届け先へ送り、プッシュサービスの HTTP ステータスを返す。リダイレクトは追わない */
 export async function sendPush(target: PushTarget, message: PushMessage, keys: VapidKeys, fetcher: Fetch = fetch): Promise<number> {
   const endpoint = pushEndpoint(target.endpoint);
@@ -121,6 +121,8 @@ export async function sendPush(target: PushTarget, message: PushMessage, keys: V
     headers: { authorization: await vapidAuthorization(endpoint, keys), ttl: '3600', urgency: 'high',
       'content-encoding': 'aes128gcm', 'content-type': 'application/octet-stream' },
   });
+  // 本文は使わない。読み残しで Workers の同時接続枠を占有しないよう閉じる
+  await res.body?.cancel();
   return res.status;
 }
 

@@ -117,3 +117,16 @@ extra, extra_u = new_user('pdevice')
 first = device('first'); subscribe(extra, first, '1台目')
 for i in range(10): subscribe(extra, device(f'more{i}'), f'{i + 2}台目')
 subscribe(stranger, first, '上限を超えて消えた届け先は他の人が登録できる')
+
+# 45件などの暗黙の件数制限で、見られる人の通知が欠落しない
+bulk_host, bulk_u = new_user('pbulkhost')
+want = []
+for i in range(5):
+    token, user = new_user(f'pbulk{i}')
+    make_friends(token, user, bulk_host, bulk_u)
+    for j in range(10):
+        subscribe(token, device(f'bulk{i}-{j}'), f'一括通知の端末 {i}-{j}')
+        want.append((user['id'], 'created'))
+s, r = call('POST', '/events', {**base, 'title': '全員への通知', 'capacity': 3, 'group_id': None}, bulk_host)
+expect('一括通知の募集', s, 201)
+sent(r['event']['id'], want, '50件の対象を黙って切り捨てない')

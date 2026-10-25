@@ -56,7 +56,7 @@
 | POST | /push/subscribe | PushSubscription.toJSON() の endpoint, keys.p256dh, keys.auth | { ok }（endpoint は https・既定ポート・認証情報なしで、FCM / Mozilla / Apple / Windows のプッシュサービスだけ。鍵は P-256 の65バイトと16バイト。それ以外→400。同じ端末の再登録は冪等。別アカウントの届け先→409（画面は購読し直す）。1人10台まで、古いものから消す） |
 | DELETE | /push/subscribe | endpoint | { ok }（自分のその届け先だけ消す。オフ・ログアウト時に画面から呼ぶ。無くても200） |
 
-送る相手（送信は返事の後に waitUntil で行う。送れなかった 404/410 の届け先は消す。1回45件まで）:
+送る相手（送信は返事の後に waitUntil で行う。送れなかった 404/410 の届け先は消す）:
 | 場面 | 相手 | data |
 |---|---|---|
 | POST /events | その募集を見られる人（visibleSql と同じ条件）。主催者は除く | kind: created、title「新しい募集」、body に主催者名とタイトル |

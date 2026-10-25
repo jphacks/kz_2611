@@ -5,7 +5,6 @@ import { dispatch, pushEndpoint, validKeys, PushMessage, PushTarget, VapidKeys }
 // 鍵は Pages の secret（手元は app/.dev.vars）。リポジトリには入れない
 type PushEnv = Env & { VAPID_PUBLIC_KEY?: string; VAPID_PRIVATE_KEY?: string; VAPID_SUBJECT?: string; PUSH_TEST_OUTBOX?: string };
 const MAX_DEVICES = 10;  // 1人あたりの端末数（古いものから消す）
-const MAX_TARGETS = 45;  // 1回の送信数（Workers のサブリクエスト上限 50 に収める）
 
 function vapid(env: PushEnv): VapidKeys | null {
   if (!env.VAPID_PUBLIC_KEY || !env.VAPID_PRIVATE_KEY) return null;
@@ -20,7 +19,7 @@ const TARGET_COLS = 's.endpoint, s.p256dh, s.auth, s.user_id';
 function deliver(c: Ctx, where: string, binds: unknown[], message: PushMessage) {
   c.waitUntil((async () => {
     const { results } = await c.env.DB.prepare(`SELECT ${TARGET_COLS} FROM push_subscriptions s JOIN events e ON e.id = ?
-      WHERE ${where} ORDER BY s.created_at DESC LIMIT ${MAX_TARGETS}`).bind(message.event_id, ...binds).all<PushTarget>();
+      WHERE ${where} ORDER BY s.created_at DESC`).bind(message.event_id, ...binds).all<PushTarget>();
     if (!results.length) return;
     if (testMode(c)) {
       for (const t of results) outbox.push({ ...message, user_id: Number(t.user_id), endpoint: t.endpoint });
