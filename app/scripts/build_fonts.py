@@ -89,13 +89,14 @@ def build(src: str, dest: str, text: str, opsz: int | None = None) -> None:
     subprocess.run([sys.executable, '-m', 'fontTools.subset', source,
                     f'--text-file={chars_path}', f'--output-file={dest}',
                     '--flavor=woff2', '--layout-features=kern,liga', '--no-hinting'], check=True)
-    covered = sum(1 for ch in text if ord(ch) in cmap_of(dest))
+    cmap = cmap_of(dest)
+    covered = sum(1 for ch in text if ord(ch) in cmap)
     print(f'{os.path.relpath(dest, APP)}: {covered}/{len(text)}文字 {os.path.getsize(dest)} bytes')
 
 
 def cmap_of(path: str) -> set[int]:
-    font = TTFont(path)
-    return set(font.getBestCmap())
+    with TTFont(path) as font:
+        return set(font.getBestCmap())
 
 
 def main() -> None:
