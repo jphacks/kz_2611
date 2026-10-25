@@ -9,11 +9,7 @@ import { AuthScreen } from './screens/AuthScreen';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { OnboardingScreen } from './screens/OnboardingScreen';
 import { ONBOARDED_KEY, shouldShowOnboarding } from './components/onboarding/state';
-import { BoardScreen } from './screens/BoardScreen';
-import { CreateScreen } from './screens/CreateScreen';
-import { TalkScreen } from './screens/TalkScreen';
-import { FollowScreen } from './screens/FollowScreen';
-import { ProfileScreen } from './screens/ProfileScreen';
+import { lazyScreen } from './lib/lazyScreen';
 import { takeEventLink } from './lib/eventLink';
 import { removePushOnLogout } from './lib/webPush';
 import { restoreSession } from './lib/session';
@@ -29,6 +25,13 @@ export interface ScreenProps {
   clearNav: () => void;
   logout: () => void;
 }
+
+// ログイン後にしか描かない画面は、初回の JS に含めずタブを開いたときに読む（#135）
+const BoardScreen = lazyScreen<ScreenProps>(() => import('./screens/BoardScreen').then(m => ({ default: m.BoardScreen })));
+const CreateScreen = lazyScreen<ScreenProps>(() => import('./screens/CreateScreen').then(m => ({ default: m.CreateScreen })));
+const TalkScreen = lazyScreen<ScreenProps>(() => import('./screens/TalkScreen').then(m => ({ default: m.TalkScreen })));
+const FollowScreen = lazyScreen<ScreenProps>(() => import('./screens/FollowScreen').then(m => ({ default: m.FollowScreen })));
+const ProfileScreen = lazyScreen<ScreenProps>(() => import('./screens/ProfileScreen').then(m => ({ default: m.ProfileScreen })));
 
 const ICON: Record<Tab, (c: string) => React.ReactNode> = {
   board: c => <Path d="M4 11 L12 4 L20 11 V20 H4 Z" stroke={c} strokeWidth={2} fill="none" />,
