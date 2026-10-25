@@ -11,6 +11,7 @@ import { errMsg } from '../lib/util';
 import { jpegDataUrl, profilePatch } from '../components/profile/profile';
 import { PhotoCropModal } from '../components/profile/PhotoCropModal';
 import { NotificationToggle } from '../components/profile/NotificationToggle';
+import { CelebrationSettings } from '../components/celebration/CelebrationSettings';
 import type { cropRect } from '../components/profile/crop';
 
 export function ProfileScreen(props: ScreenProps) {
@@ -109,6 +110,7 @@ export function ProfileScreen(props: ScreenProps) {
           {busy === 'save' ? <ActivityIndicator color={C.white} accessibilityLabel="保存中" /> : <Text style={S.btnText}>変更を保存</Text>}
         </Pressable>
         <NotificationToggle />
+        <CelebrationSettings />
         <View style={styles.footer}>
           <Pressable accessibilityRole="button" disabled={!!busy} onPress={() => { if (!lock.current) { lock.current = true; setBusy('logout'); props.logout(); } }} style={[S.btnGhost, busy && styles.disabled]}>
             <Text style={S.btnGhostText}>ログアウト</Text>

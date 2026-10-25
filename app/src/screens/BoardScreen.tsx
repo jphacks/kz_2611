@@ -6,6 +6,9 @@ import { api, EventItem } from '../api';
 import { ChatSheet } from '../components/ChatSheet';
 import { EventCard } from '../components/EventCard';
 import { compareBoardEvents } from '../components/board/eventOrder';
+import { JoinCelebration } from '../components/celebration/JoinCelebration';
+import { prepareCelebrationSound } from '../components/celebration/feedback';
+import { useCelebrateSettings } from '../components/celebration/settings';
 import { ParticipantsSheet } from '../components/ParticipantsSheet';
 import { errMsg, usePolling } from '../lib/util';
 import type { ScreenProps } from '../Main';
@@ -27,6 +30,8 @@ export function BoardScreen(p: ScreenProps) {
   const [joining, setJoining] = useState<number | null>(null);
   const [leaving, setLeaving] = useState<number | null>(null);
   const [deleting, setDeleting] = useState<number | null>(null);
+  const [celebration, setCelebration] = useState(false);
+  const celebrate = useCelebrateSettings();
   const joiningRef = useRef(false);
   const deletingRef = useRef(false);
   const active = useRef(true);
@@ -67,18 +72,22 @@ export function BoardScreen(p: ScreenProps) {
   const join = useCallback(async (event: EventItem) => {
     if (joiningRef.current) return;
     joiningRef.current = true; setJoining(event.id); setActionError('');
+    // Safari でも鳴らせるように、スワイプの操作の中で音の準備だけしておく
+    prepareCelebrationSound(celebrate.sound);
     try {
       const result = await api<{ event: EventItem }>(`/events/${event.id}/join`, { method: 'POST' });
       if (active.current) {
         // 参加前に開始した一覧取得で参加済みの表示を巻き戻さない。
         request.current++;
         setEvents(old => old.map(e => e.id === result.event.id ? result.event : e));
+        // 参加が成功したときだけ演出を流す（失敗・取り消し・主催者では出さない）
+        setCelebration(true);
       }
     } catch (e) {
       if (active.current) setActionError(errMsg(e));
       void refresh().catch(() => {});
     } finally { joiningRef.current = false; if (active.current) setJoining(null); }
-  }, []);
+  }, [celebrate.sound]);
   const leave = useCallback(async (event: EventItem) => {
     if (joiningRef.current || event.is_host || !event.joined) return;
     joiningRef.current = true; setLeaving(event.id); setActionError('');
@@ -142,6 +151,12 @@ export function BoardScreen(p: ScreenProps) {
         void refresh().catch(() => {});
       }} />
       <ParticipantsSheet me={p.me} event={members} onClose={() => setMembers(null)} />
+      <JoinCelebration
+        visible={celebration}
+        onDone={() => setCelebration(false)}
+        sound={celebrate.sound}
+        vibrate={celebrate.vibrate}
+      />
     </View>
   );
 }
