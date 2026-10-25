@@ -124,3 +124,28 @@ test('招待リンクの追加は status なしの { friend } でも友達にな
   assert.equal(social.refreshes, 1);
   assert.deepEqual([...replaced], ['https://example.com/']);
 });
+
+test('招待確認に失敗しても「再読み込み」で確認し直し、招待シートを表示する', async () => {
+  const { server, h } = setup('bobcode');
+  server.take('GET', '/invite/bobcode').reject(new Error('Failed to fetch'));
+  lists(server, [], []); await flush();
+  assert.match(page(h), /招待を確認できませんでした: Failed to fetch/);
+  press(h.tree, '再読み込み');
+  server.take('GET', '/invite/bobcode').resolve({ user: bob });
+  lists(server, [], []); await flush();
+  assert.doesNotMatch(page(h), /招待を確認できませんでした/);
+  assert.match(page(h), /招待が届いています/);
+  assert.match(page(h), /ボブ/);
+});
+
+test('再読み込みしても招待確認に失敗したら、招待エラーを出し続ける', async () => {
+  const { server, social, h } = setup('bobcode');
+  server.take('GET', '/invite/bobcode').reject(new Error('Failed to fetch'));
+  lists(server, [], []); await flush();
+  press(h.tree, '再読み込み');
+  server.take('GET', '/invite/bobcode').reject(new Error('Failed to fetch'));
+  lists(server, [], []); await flush();
+  assert.match(page(h), /招待を確認できませんでした: Failed to fetch/);
+  assert.doesNotMatch(page(h), /招待が届いています/);
+  assert.equal(social.refreshes, 1);
+});

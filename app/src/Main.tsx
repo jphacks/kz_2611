@@ -16,6 +16,8 @@ import { FollowScreen } from './screens/FollowScreen';
 import { ProfileScreen } from './screens/ProfileScreen';
 import { takeEventLink } from './lib/eventLink';
 import { removePushOnLogout } from './lib/webPush';
+import { restoreSession } from './lib/session';
+import { StartupError } from './components/StartupError';
 
 export type Tab = 'board' | 'create' | 'talk' | 'follow' | 'profile';
 export interface ScreenProps {
@@ -44,18 +46,28 @@ export function Main() {
   const [onboarding, setOnboarding] = useState(false);
   const [tab, setTab] = useState<Tab>('board');
   const [nav, setNav] = useState<{ openEventId?: number; editEventId?: number }>({});
-  useEffect(() => { (async () => {
-    let loggedIn = false;
-    if (await loadToken()) { try { setMe((await api<{ user: Me }>('/me')).user); loggedIn = true; } catch { await setToken(null); } }
+  const [startupError, setStartupError] = useState(false);
+  // 起動時のログイン確認（#128）。認証拒否のときだけトークンを捨て、通信失敗は残して再試行できるようにする
+  const boot = async () => {
+    setStartupError(false);
+    const { me: restored, failed } = await restoreSession({
+      token: await loadToken(),
+      fetchMe: async () => (await api<{ user: Me }>('/me')).user,
+      clearToken: () => setToken(null),
+    });
+    if (failed) { setStartupError(true); setReady(true); return; }
+    if (restored) setMe(restored);
     try {
-      setOnboarding(shouldShowOnboarding(loggedIn, await AsyncStorage.getItem(ONBOARDED_KEY)));
+      setOnboarding(shouldShowOnboarding(!!restored, await AsyncStorage.getItem(ONBOARDED_KEY)));
     } catch { /* 保存領域が使えない端末では認証を妨げない。案内は手動で開ける。 */ }
     setReady(true);
-  })(); }, []);
+  };
+  useEffect(() => { void boot(); }, []);
   // #87 通知から開いた募集（/?event=<id>）を掲示板で開く。ログイン前なら、ログイン後に開く
   const [link, setLink] = useState(takeEventLink);
   useEffect(() => { if (me && link !== undefined) { setNav({ openEventId: link }); setTab('board'); setLink(undefined); } }, [me, link]);
   if (!ready) return <View style={{ flex: 1, backgroundColor: C.bg }} />;
+  if (startupError) return <View style={{ flex: 1, backgroundColor: '#E9E9E9', alignItems: 'center' }}><SafeAreaView style={{ flex: 1, width: '100%', maxWidth: 480, backgroundColor: C.bg }}><StartupError onRetry={boot} /></SafeAreaView></View>;
   if (!me) return <View style={{ flex: 1, backgroundColor: '#E9E9E9', alignItems: 'center' }}><SafeAreaView style={{ flex: 1, width: '100%', maxWidth: 480, backgroundColor: C.bg }}>{onboarding ? <OnboardingScreen onDone={async () => { await AsyncStorage.setItem(ONBOARDED_KEY, '1'); setOnboarding(false); }} /> : <AuthScreen onDone={setMe} onShowOnboarding={() => setOnboarding(true)} />}</SafeAreaView></View>;
   const props: ScreenProps = {
     me, setMe, ...nav,

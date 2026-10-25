@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 import { api, type EventItem, type Me, type Message } from '../api';
 import { errMsg, usePolling } from '../lib/util';
@@ -7,6 +7,10 @@ import { Avatar } from '../ui/Avatar';
 import { Sheet } from '../ui/Sheet';
 import { C, S, T, tint } from '../ui/theme';
 import { ParticipantsSheet } from './ParticipantsSheet';
+import { JoinCelebration } from './celebration/JoinCelebration';
+import { preloadBirdImages } from './celebration/birds';
+import { prepareCelebrationSound } from './celebration/feedback';
+import { useCelebrateSettings } from './celebration/settings';
 import { canJoin, mergeMessages } from './chat/messages';
 
 export interface ChatSheetProps {
@@ -30,13 +34,20 @@ function ChatSession({ eventId, me, onClose, onChanged, onEdit }: Omit<ChatSheet
   const [menu, setMenu] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [participants, setParticipants] = useState(false);
+  const [celebration, setCelebration] = useState(false);
+  const celebrate = useCelebrateSettings();
   const alive = useRef(true);
   const lock = useRef(false);
   const cursor = useRef(0);
   const scroll = useRef<React.ComponentRef<typeof ScrollView>>(null);
   const nearBottom = useRef(true);
   const member = !!event && (event.joined || event.is_host);
-  useEffect(() => { alive.current = true; return () => { alive.current = false; }; }, []);
+  useEffect(() => {
+    alive.current = true;
+    // トーク画面から開いたときも、参加の演出の鳥を先に読み込んでおく（#98）
+    preloadBirdImages();
+    return () => { alive.current = false; };
+  }, []);
   async function loadEvent() {
     setLoading(true);
     try {
@@ -60,6 +71,8 @@ function ChatSession({ eventId, me, onClose, onChanged, onEdit }: Omit<ChatSheet
     const text = body.trim();
     if (kind === 'send' && (!text || text.length > 500)) return;
     lock.current = true; setBusy(true); setError('');
+    // Safari でも鳴らせるように、ボタンを押した操作の中で音の準備だけしておく（掲示板のスワイプと同じ）
+    if (kind === 'join') prepareCelebrationSound(celebrate.sound);
     try {
       if (kind === 'send') {
         const data = await api<{ message: Message }>(`/events/${eventId}/messages`, { body: { body: text } });
@@ -75,6 +88,8 @@ function ChatSession({ eventId, me, onClose, onChanged, onEdit }: Omit<ChatSheet
         if (!alive.current) return;
         setEvent(data.event); setMenu(false); setParticipants(false);
         setMessages([]); cursor.current = 0; onChanged(data.event);
+        // 参加が成功したときだけ、掲示板のスワイプと同じ演出を流す（#151）
+        if (kind === 'join' && data.event.joined) setCelebration(true);
       }
     } catch (e) { if (alive.current) setError(errMsg(e)); }
     finally { lock.current = false; if (alive.current) setBusy(false); }
@@ -125,5 +140,9 @@ function ChatSession({ eventId, me, onClose, onChanged, onEdit }: Omit<ChatSheet
       </KeyboardAvoidingView>
     </Sheet>
     <ParticipantsSheet me={me} event={participants ? event : null} onClose={() => setParticipants(false)} />
+    {/* チャットのシートより手前に出すため、演出は別の Modal に載せる */}
+    <Modal visible={celebration} transparent animationType="none" onRequestClose={() => setCelebration(false)}>
+      <JoinCelebration visible={celebration} onDone={() => setCelebration(false)} sound={celebrate.sound} vibrate={celebrate.vibrate} />
+    </Modal>
   </>;
 }

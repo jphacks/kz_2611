@@ -8,10 +8,10 @@ if urlparse(BASE).hostname not in ('localhost', '127.0.0.1'):
 
 SUFFIX = f"{int(time.time()) % 100000}{random.randint(10, 99)}"
 
-def call(method, path, body=None, token=None):
+def call(method, path, body=None, token=None, headers=None):
     req = urllib.request.Request(BASE + '/api' + path, method=method,
         data=json.dumps(body).encode() if body is not None else None,
-        headers={'content-type': 'application/json', 'user-agent': 'kz2611-test', **({'authorization': 'Bearer ' + token} if token else {})})
+        headers={'content-type': 'application/json', 'user-agent': 'kz2611-test', **({'authorization': 'Bearer ' + token} if token else {}), **(headers or {})})
     try:
         with urllib.request.urlopen(req) as r:
             return r.status, json.loads(r.read() or b'{}')
