@@ -10,8 +10,8 @@ PAGE_CSP = [
     "base-uri 'self'",
     "script-src 'self'",
     "img-src 'self' data: blob:",
-    "https://fonts.googleapis.com",
-    "https://fonts.gstatic.com",
+    "style-src 'self' 'unsafe-inline'",
+    "font-src 'self' data:",
 ]
 API_CSP = ["default-src 'none'", "frame-ancestors 'none'", "base-uri 'none'", "object-src 'none'"]
 
@@ -44,6 +44,9 @@ csp = h.get('content-security-policy', '')
 expect('トップページの CSP がある', bool(csp), True)
 for part in PAGE_CSP:
     expect(f'トップページ CSP: {part}', part in csp, True)
+# #156 自前フォント配信に不要な外部 stylesheet/font の許可を戻さない
+for origin in ['https://fonts.googleapis.com', 'https://fonts.gstatic.com']:
+    expect(f'トップページ CSP に不要な外部許可がない: {origin}', origin in csp, False)
 
 # 静的ファイル（Service Worker / 画像も同じヘッダー）
 s, h = headers('/sw.js')
