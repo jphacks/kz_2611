@@ -80,3 +80,10 @@ export const visibleSql = (meId: number) => EVENT_VISIBLE_SQL.replaceAll(':me', 
 
 // #87 返事の後に続ける処理（通知の送信など）。Pages の waitUntil へ渡す
 export interface Ctx { waitUntil: (p: Promise<unknown>) => void }
+
+/** JSON の整数チェック（配列・オブジェクト・真偽値・null・数値文字列は受け付けない） */
+export function jsonInt(v: unknown, name: string, min: number, max: number): number {
+  if (typeof v !== 'number' || !Number.isInteger(v) || v < min || v > max)
+    throw new HttpError(400, `${name}は${min}〜${max}で指定してください`);
+  return v;
+}
