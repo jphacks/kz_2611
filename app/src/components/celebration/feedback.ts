@@ -103,9 +103,49 @@ export function playCelebrationSound(enabled: boolean) {
   }
 }
 
-/** 振動。navigator.vibrate がない端末（iPhone など）では何もしない */
+/**
+ * 参加確定の release ハンドラーから、await / タイマーより前に呼ぶ。
+ * 短いパターンを1回だけ送り、後続呼び出しで上書きしない。
+ * iPhone の switch は iOS 18 以降の実験的な方法で、鳴動は保証できない。
+ * WebKit 313638@main は label.click() による鳴動を制限しており、新しい Safari では効かない場合がある。
+ * 戻り値は API 失敗・画面離脱時の停止用（オフ／非対応なら何もしない）。
+ */
+export function startJoinHaptic(enabled: boolean): () => void {
+  const noop = () => {};
+  if (!enabled || Platform.OS !== 'web' || typeof navigator === 'undefined') return noop;
+  try {
+    if (typeof navigator.vibrate === 'function') {
+      navigator.vibrate([30, 20, 35, 20, 40, 25, 60]);
+      let stopped = false;
+      return () => {
+        if (stopped) return;
+        stopped = true;
+        vibratePattern(0);
+      };
+    }
+    const ua = navigator.userAgent;
+    const ios = Number(/OS (\d+)/.exec(ua)?.[1] ?? 0);
+    if (!/iPhone/.test(ua) || ios < 18 || typeof document === 'undefined' || !document.body) return noop;
+    const label = document.createElement('label');
+    const input = document.createElement('input');
+    input.type = 'checkbox';
+    input.setAttribute('switch', '');
+    input.tabIndex = -1;
+    label.setAttribute('aria-hidden', 'true');
+    Object.assign(label.style, { position: 'fixed', left: '0', bottom: '0', width: '1px', height: '1px', opacity: '0.001', pointerEvents: 'none' });
+    label.appendChild(input);
+    document.body.appendChild(label);
+    try { label.click(); } finally { label.remove(); }
+    // 遅延 click はユーザー操作外になるため予約しない。
+  } catch {
+    // 非対応・権限拒否でも参加処理を続ける。
+  }
+  return noop;
+}
+
+/** Vibration API のみ。オフなら停止要求も送らない。 */
 export function vibratePattern(pattern: number | number[], enabled = true) {
-  if (!enabled && pattern !== 0) return;
+  if (!enabled || Platform.OS !== 'web') return;
   if (typeof navigator === 'undefined' || typeof navigator.vibrate !== 'function') return;
   try {
     navigator.vibrate(pattern);

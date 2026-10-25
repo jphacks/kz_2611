@@ -17,7 +17,7 @@ export function CelebrationSettings() {
       />
       <Toggle
         label="振動"
-        description="参加が成立した瞬間に端末を振動させます（振動しない端末では何も起きません）"
+        description="掲示板で指を離して参加を確定したときに短く振動します（通信失敗でも最初の振動は鳴ります）。Androidは対応ブラウザと端末設定によります。iPhoneはiOS 18以降の実験的な対応です（新しいSafariでは制限され、振動しない場合があります）。"
         on={vibrate}
         onChange={setVibrate}
       />
