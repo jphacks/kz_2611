@@ -12,6 +12,22 @@
     <meta name="apple-mobile-web-app-title" content="このゆびとまれ" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <title>%WEB_TITLE%</title>
+    <!-- #134 フォント: public/fonts/ に置いたサブセットを同じオリジンから配る（外部への接続と CSS の往復をなくす）。
+         文字を足したときは app/scripts/build_fonts.py で作り直す。表示は swap にして文字を先に出す -->
+    <style id="kz-fonts">
+      @font-face {
+        font-family: 'Inter';
+        src: url('/fonts/inter-subset.woff2?v=2') format('woff2');
+        font-weight: 100 900;
+        font-display: swap;
+      }
+      @font-face {
+        font-family: 'Noto Sans JP';
+        src: url('/fonts/noto-sans-jp-subset.woff2?v=2') format('woff2');
+        font-weight: 100 900;
+        font-display: swap;
+      }
+    </style>
     <!-- The `react-native-web` recommended style reset: https://necolas.github.io/react-native-web/docs/setup/#root-element -->
     <style id="expo-reset">
       /* These styles make the body full-height */

@@ -1,8 +1,9 @@
 // 参加したイベントのトーク。終了した募集もここから読み返せる。
 import { useRef, useState, useEffect } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { api, type Talk } from '../api';
+import { api, type Talk, type TalkPage } from '../api';
 import { ChatSheet } from '../components/ChatSheet';
+import { TALKS_PAGE_SIZE, appendPage, mergeFirstPage } from '../components/chat/talks';
 import { errMsg, usePolling } from '../lib/util';
 import { Avatar } from '../ui/Avatar';
 import { Header } from '../ui/Header';
@@ -14,16 +15,24 @@ export function TalkScreen(p: ScreenProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [eventId, setEventId] = useState<number | null>(null);
+  const [next, setNext] = useState<string | null>(null);
+  const [more, setMore] = useState(false);
   const mounted = useRef(true);
   const pending = useRef<Promise<void> | null>(null);
+  // 過去ページを読み込んだ後は、定期取得で先頭ページのカーソルへ戻さない。
+  const deeper = useRef(false);
   useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
 
   const refresh = (): Promise<void> => {
     if (pending.current) return pending.current;
     const task = (async () => {
       try {
-        const data = await api<{ talks: Talk[] }>('/talks');
-        if (mounted.current) { setTalks(data.talks); setError(''); }
+        const data = await api<TalkPage>(`/talks?limit=${TALKS_PAGE_SIZE}`);
+        if (mounted.current) {
+          setTalks(old => mergeFirstPage(old, data.talks));
+          if (!deeper.current) setNext(data.next);
+          setError('');
+        }
       } catch (e) {
         if (mounted.current) setError(errMsg(e));
         throw e;
@@ -36,6 +45,24 @@ export function TalkScreen(p: ScreenProps) {
     return task;
   };
   usePolling(refresh, 3000);
+
+  const loadMore = async () => {
+    if (!next || more) return;
+    setMore(true);
+    try {
+      const data = await api<TalkPage>(
+        `/talks?limit=${TALKS_PAGE_SIZE}&before=${encodeURIComponent(next)}`);
+      if (!mounted.current) return;
+      deeper.current = true;
+      setTalks(old => appendPage(old, data.talks));
+      setNext(data.next);
+      setError('');
+    } catch (e) {
+      if (mounted.current) setError(errMsg(e));
+    } finally {
+      if (mounted.current) setMore(false);
+    }
+  };
 
   const sections = [
     { title: '参加中', items: talks.filter(t => t.active) },
@@ -90,6 +117,11 @@ export function TalkScreen(p: ScreenProps) {
             })}
           </View>
         ))}
+        {next ? (
+          <Pressable accessibilityRole="button" accessibilityState={{ disabled: more }} disabled={more} onPress={() => void loadMore()} style={[S.btnGhost, styles.more]}>
+            <Text style={S.btnGhostText}>{more ? '読み込み中…' : 'もっと見る'}</Text>
+          </Pressable>
+        ) : null}
       </ScrollView>
       <ChatSheet eventId={eventId} me={p.me} onClose={() => setEventId(null)} onChanged={event => {
         if (!event) setEventId(null);
@@ -109,4 +141,5 @@ const styles = StyleSheet.create({
   rowTop: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   grow: { flex: 1 },
   avatars: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  more: { marginTop: 8 },
 });
