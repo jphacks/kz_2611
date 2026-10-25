@@ -12,7 +12,7 @@
 | docs/design/style11-colorpop.png | デザインの見本（Color Pop）。全画面これに揃える |
 | docs/design/sketch-styles-12.pdf | デザイン候補12案（採用は STYLE 11 Color Pop） |
 | docs/design/ui-image/ | 手書き図と音声から作ったUIイメージ |
-| docs/sources/ | 元資料: アイデアマップ、UI設計図、手書きUI図、説明音声の文字起こし |
+| [docs/sources/](docs/sources/) | 元資料: アイデアマップ、UI設計図、手書きUI図。説明音声の文字起こしはチーム内資料（追加・転載しない） |
 
 ## 始め方
 必要なもの: Node.js 22、Python 3、gh CLI（`gh auth login` 済み、jphacks/kz_2611 に push できること）
