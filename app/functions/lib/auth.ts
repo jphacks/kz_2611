@@ -48,8 +48,11 @@ export const authRoutes: Route[] = [
     const password = str(b.password, 'パスワード', 8, 100);
     if (await env.DB.prepare('SELECT 1 FROM users WHERE handle = ?').bind(handle).first()) throw new HttpError(409, 'そのIDは使われています');
     const salt = randomHex(16);
-    const r = await env.DB.prepare('INSERT INTO users (handle, name, avatar, invite_code, pass_hash, salt, created_at) VALUES (?, ?, NULL, ?, ?, ?, ?)')
+    // 事前確認後に同じIDが登録されても、制約エラーではなく409にする。
+    // handle以外の制約エラーはそのまま返し、重複時にはセッションも作らない。
+    const r = await env.DB.prepare('INSERT INTO users (handle, name, avatar, invite_code, pass_hash, salt, created_at) VALUES (?, ?, NULL, ?, ?, ?, ?) ON CONFLICT(handle) DO NOTHING')
       .bind(handle, name, randomHex(8), await hashPassword(password, salt), salt, now()).run();
+    if (!r.meta.changes) throw new HttpError(409, 'そのIDは使われています');
     const id = r.meta.last_row_id;
     return json({ token: await issue(env, id), user: await me(env, id) }, 201);
   } },
