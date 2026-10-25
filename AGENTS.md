@@ -25,7 +25,7 @@ Claude Code / Codex などのAIエージェントと人間の両方が読む。�
 
 ## 3. デザイン（Color Pop・スマホ操作前提・全画面で統一）
 - 見本: docs/design/style11-colorpop.png（候補12案は docs/design/sketch-styles-12.pdf の STYLE 11、UIイメージは docs/design/ui-image/）
-- 元資料: docs/sources/（アイデアマップ、UI設計図、手書きUI図、説明音声の文字起こし）。始め方は CONTRIBUTING.md
+- 元資料: [docs/sources/](docs/sources/)（アイデアマップ、UI設計図、手書きUI図）。説明音声の文字起こしはチーム内資料として扱い、追加・転載しない。始め方は [CONTRIBUTING.md](CONTRIBUTING.md)
 - 色は app/src/ui/theme.ts の C だけ: オレンジ #FF5A36 / 青 #3D5AFE / ピンク #FF3D9A / 緑 #00B37E / 薄灰 #F2F2F2 / 黒 #111111 / 締切間近の黄 #FFD43B。新しい色・グラデーション・影を作らない
 - 募集のカードはビビッドな単色＋白文字。色は popColor(タイトル) で決める（同じ遊びはいつも同じ色）
 - 角丸: カードは RADIUS（22）、チップ・ボタン・入力欄・バッジは PILL（丸いピル）。四角い枠や黒い太線は使わない
