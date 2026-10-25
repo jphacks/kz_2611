@@ -5,6 +5,8 @@ self.addEventListener('activate', event => event.waitUntil(self.clients.claim())
 self.addEventListener('push', event => {
   let data = {};
   try { data = event.data ? event.data.json() : {}; } catch { data = {}; }
+  // JSON として有効な null・配列・プリミティブも、空の通知として扱う。
+  if (!data || typeof data !== 'object' || Array.isArray(data)) data = {};
   const id = Number(data.event_id);
   event.waitUntil(self.registration.showNotification(typeof data.title === 'string' ? data.title : 'このゆびとまれ', {
     body: typeof data.body === 'string' ? data.body : '',
