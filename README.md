@@ -2,6 +2,21 @@
 
 フッ軽遊びをもっと気軽に。LINE で誘いづらい「ちょっと遊びたい」を、募集・応募の形式で解決する Web アプリです。
 
+**▶ アプリを使ってみる: https://kz2611.pages.dev**
+
+<table>
+  <tr>
+    <td align="center"><img src="docs/images/screen-create.png" alt="誘う（募集を作る）画面" width="240"></td>
+    <td align="center"><img src="docs/images/demo-join.gif" alt="指をスライドして参加すると「とまった!!」の演出が流れる様子" width="240"></td>
+    <td align="center"><img src="docs/images/screen-chat.png" alt="参加者だけのチャット" width="240"></td>
+  </tr>
+  <tr>
+    <td align="center">① 誘う</td>
+    <td align="center">② 指をスライドして参加</td>
+    <td align="center">③ 参加者だけでチャット</td>
+  </tr>
+</table>
+
 ## 製品概要
 ### 背景(製品開発のきっかけ、課題等）
 大学生・若者は友達と「ちょっと遊びたい」と思ったとき、LINE の DM やグループでメッセージを送らないといけない。しかし、相手の都合が合わないときに別の人を探す手間がかかる。また、返信を返す側も返信に気づかずタイムラグが発生したり、都合が合わない時に断りづらさを感じたりする。グループ内でもメンツが分からない不安がある。そのため誘う側も誘われる側にも気まずさが生じることがあり、誘いにくいという課題があります。
