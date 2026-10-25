@@ -16,7 +16,3 @@ export function jpegDataUrl(base64?: string | null) {
   if (url.length > 200 * 1024) throw new Error('画像が200KBを超えています。別の画像を選んでください');
   return url;
 }
-
-export function avatarResize(width: number, height: number) {
-  return width >= height ? { width: Math.min(width, 256) } : { height: Math.min(height, 256) };
-}
