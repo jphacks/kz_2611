@@ -1,0 +1,19 @@
+import { useEffect, useRef, useState } from 'react';
+import { Image } from 'react-native';
+const flock=[require('./bird_orange.png'),require('./bird_blue.png'),require('./bird_pink.png'),require('./bird_white.png')];
+export function Gauge({minutes,pop}:{minutes:number;pop:boolean}){
+ const [departed,setDeparted]=useState<number[]>([]), previous=useRef(24);
+ useEffect(()=>{const now=Math.ceil(minutes);const ids=Array.from({length:Math.max(0,previous.current-now)},(_,i)=>now+i);previous.current=now;setDeparted(ids);const t=setTimeout(()=>setDeparted([]),1800);return()=>clearTimeout(t)},[Math.ceil(minutes)]);
+ const count=Math.ceil(minutes), urgent=minutes<=1, warm=minutes<=10;
+ return <div className={`g3-gauge ${pop?'pop':'flock'} ${urgent?'urgent':warm?'warm':''} ${minutes===0?'expired':''}`} aria-label={`外枠の残り時間 ${count}分`}>
+ <svg viewBox="0 0 660 580" preserveAspectRatio="none"><rect x="10" y="10" width="640" height="560" rx="44" fill="none" stroke="currentColor" strokeOpacity=".16" strokeWidth="13"/><rect className="g3-line" x="10" y="10" width="640" height="560" rx="44" fill="none" stroke="currentColor" strokeWidth={pop?7:4} pathLength="100" strokeDasharray={`${minutes/24*100} 100`}/></svg>
+ {Array.from({length:24},(_,i)=>{const alive=i<count, flying=departed.includes(i),path='path("M 44 10 H 616 Q 650 10 650 44 V 536 Q 650 570 616 570 H 44 Q 10 570 10 536 V 44 Q 10 10 44 10 Z")';return <div key={i} className={`g3-unit ${alive?'lit':'dim'} ${flying?'depart':''}`} style={{offsetPath:'inset(6px round 23px)',offsetDistance:`${i/24*100}%`,offsetRotate:'0deg',animationDelay:`${-i*.12}s`, '--i':i} as React.CSSProperties}>{pop?<span className="g3-dot"><i/><b/></span>:<Image source={flock[i%4]} style={{width:32,height:32}} resizeMode="contain"/>}</div>})}
+ {minutes===0&&<strong className="g3-finale">{pop?'POP! 受付終了':'みんな、飛び立った！'}</strong>}
+ </div>
+}
+export const gaugeCSS=`
+.g3-gauge{position:absolute;inset:0;pointer-events:none;color:#e5ff56;z-index:4;--beat:1s;container-type:size}.g3-gauge.warm{color:#ff9c30;--beat:.55s}.g3-gauge.urgent{color:#ff3ea5;--beat:.24s}.g3-gauge svg{position:absolute;width:100%;height:100%;overflow:visible;filter:drop-shadow(0 0 5px currentColor)}
+.g3-unit{position:absolute;left:0;top:0;width:32px;height:32px;margin:-16px;offset-anchor:center;transform:scale(.9);transition:opacity .4s;}.g3-gauge.flock .g3-unit.dim{opacity:0}.g3-gauge.urgent svg{filter:drop-shadow(0 0 9px #ff3ea5)}.g3-gauge.warm .g3-line{stroke-width:10}.g3-gauge.urgent .g3-line{stroke-width:17}.g3-unit.dim{opacity:.12;filter:grayscale(1)}.g3-unit.lit{animation:g3-step var(--beat) infinite alternate;filter:drop-shadow(0 2px 2px #111)}.g3-gauge.flock .g3-unit.lit{animation:g3-walk 24s linear infinite,g3-step var(--beat) infinite alternate}.g3-dot{display:block;width:23px;height:23px;margin:4px;border-radius:50%;background:currentColor;border:3px solid #111;box-shadow:0 0 0 2px currentColor,0 0 12px currentColor}.g3-dot i,.g3-dot b{position:absolute;top:24px;width:3px;height:8px;background:currentColor;transform:rotate(25deg)}.g3-dot i{left:11px}.g3-dot b{right:9px;transform:rotate(-25deg)}.urgent .g3-unit.lit{transform:scale(1.35)}.g3-unit.depart{opacity:1;animation:g3-fly 1.8s ease-out forwards!important;animation-delay:0s!important}.g3-finale{position:absolute;inset:auto 12px 12px;background:#e5ff56;color:#111;text-align:center;padding:9px;border-radius:18px;font-size:13px;box-shadow:4px 4px #ff3ea5}.g3-gauge.expired .g3-line{opacity:0}
+@keyframes g3-step{to{translate:0 -5px;rotate:7deg}}@keyframes g3-walk{to{offset-distance:calc(100% + var(--i)*4.16667%)}}@keyframes g3-fly{0%{opacity:1;scale:1}35%{opacity:1;scale:1.7}100%{translate:calc((var(--i) - 12)*20px) -170px;rotate:35deg;opacity:0;scale:.4}}
+@media(prefers-reduced-motion:reduce){.g3-unit{animation:none!important}.g3-unit.depart{opacity:0}.g3-line{filter:none}}
+`;

@@ -1,3 +1,4 @@
+import { PreviewG3 } from './src/preview/g3/PreviewG3';
 import { Platform } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
@@ -18,6 +19,7 @@ if (Platform.OS === 'web' && typeof document !== 'undefined' && !document.getEle
 
 export default function App() {
   const preview = Platform.OS === 'web' ? new URLSearchParams(window.location.search).get('preview') : null;
+  if (preview === 'g3') return <SafeAreaProvider><StatusBar style="dark" /><PreviewG3 /></SafeAreaProvider>;
   if (preview === 'x3') return <SafeAreaProvider><StatusBar style="dark" /><PreviewX3 /></SafeAreaProvider>;
   if (preview === 'x6') return <SafeAreaProvider><StatusBar style="dark" /><PreviewX6 /></SafeAreaProvider>;
   return (
