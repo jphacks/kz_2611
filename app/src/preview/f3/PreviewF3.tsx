@@ -1,46 +1,8 @@
-import { ScrollView, Text, View, StyleSheet } from "react-native";
-import { FONT, RADIUS } from "../../ui/theme";
-import { Idea07 } from "./Idea07";
-import { Idea08 } from "./Idea08";
-import { Idea09 } from "./Idea09";
-
-const INK = "rgb(17,17,17)";
-const MUTED = "rgb(138,138,138)";
-const BG = "rgb(245,245,245)";
-
-export function PreviewF3() {
-  return (
-    <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
-      <Text style={styles.pageTitle}>preview/f3 — この指とまれ DESIGN IDEAS</Text>
-      <Text style={styles.pageSub}>担当: 07 ワンライン / 08 かぞえゆび / 09 ゆびピン（地図）</Text>
-
-      <Section number="07" name="ワンライン">
-        <Idea07 />
-      </Section>
-      <Section number="08" name="かぞえゆび">
-        <Idea08 />
-      </Section>
-      <Section number="09" name="ゆびピン（地図）">
-        <Idea09 />
-      </Section>
-    </ScrollView>
-  );
-}
-
-function Section({ number, name, children }: { number: string; name: string; children: any }) {
-  return (
-    <View style={styles.section}>
-      <Text style={styles.heading}>{number}  {name}</Text>
-      {children}
-    </View>
-  );
-}
-
-const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: BG },
-  content: { padding: 16, gap: 24, paddingBottom: 48 },
-  pageTitle: { fontFamily: FONT, fontSize: 20, fontWeight: "900", color: INK },
-  pageSub: { fontFamily: FONT, fontSize: 12, color: MUTED, marginBottom: 8 },
-  section: { gap: 12 },
-  heading: { fontFamily: FONT, fontSize: 22, fontWeight: "900", color: INK, marginTop: 8 },
-});
+import React,{useState} from 'react';
+import {ScrollView,View,Text,Pressable} from 'react-native';
+import Svg,{Path,Rect,Circle,G,Text as T,Ellipse} from 'react-native-svg';
+const O='#FF5A36',B='#3D5AFE',P='#FF3EA5',K='#111111';
+function L({x,y,children,size=20,color=K}:any){return <T x={x} y={y} fontFamily="Noto Sans JP, sans-serif" fontWeight="700" fontSize={size} fill={color}>{children}</T>}
+function Pin({x,y,c,t,onPress,joined}:any){return <G transform={`translate(${x} ${y}) scale(${t==='り'?1.15:0.8})`} onPress={onPress}><Ellipse cy={50} rx={22} ry={7} fill="#C6C7CB"/>{joined&&<Ellipse cy={46} rx={29} ry={12} stroke={P} strokeWidth={5} fill="none"/>}<Path d="M-25 25 Q-25 4 -7 4 H8 Q27 4 27 25 V31 Q27 50 5 50 H-5 Q-25 50 -25 31" fill={c}/><Path d="M0 7 V-29" stroke="#E9EAED" strokeWidth={22} strokeLinecap="round"/><Path d="M0 7 V-29" stroke={c} strokeWidth={13} strokeLinecap="round"/><Path d="M-25 19 H-5 Q12 19 3 31 H-25" fill="none" stroke="#E9EAED" strokeWidth={6} strokeLinecap="round"/><Circle cy={-31} r={16} fill="white"/><L x={-9} y={-25} color={c}>{t}</L><Rect x={-34} y={-50} width={68} height={109} fill="transparent"/></G>}
+function Card({kind}:{kind:number}){const [joined,join]=useState(false),[selected,select]=useState('');return <View style={{marginBottom:30}}><Text style={{fontSize:26,fontWeight:'900',marginBottom:12}}>{['07 ワンライン','08 かぞえゆび','09 ゆびピン（地図）'][kind]}</Text><View style={{backgroundColor:'#F3F2EF',padding:12,borderRadius:22}}><Text style={{fontSize:11,color:'#888',fontWeight:'700',marginBottom:10}}>{joined?'参加後':'参加前'}</Text><View style={{width:'100%',aspectRatio:kind===2?1.5:1.65}}><Svg width="100%" height="100%" viewBox={kind===2?'0 0 660 440':'0 0 660 400'}>{kind===0?<><Rect x={3} y={12} width={654} height={380} rx={48} fill="#FAF7F1" stroke="#DEDBD6" strokeWidth={5}/><Path d={joined?'M49 12 A46 46 0 0 0 3 58 V346 A46 46 0 0 0 49 392 H353':'M49 12 A46 46 0 0 0 3 58 V346 A46 46 0 0 0 49 392 H610'} fill="none" stroke={O} strokeWidth={5}/><Path d="M63 392 C65 354 53 302 75 274 Q94 253 121 259 V132 C121 97 165 97 165 132 V237 Q179 218 198 240 Q220 218 234 249 C262 227 269 263 258 319 L246 392 M118 292 Q156 304 199 281" fill="none" stroke={O} strokeWidth={6} strokeLinecap="round" strokeLinejoin="round"/><Circle onPress={()=>join(!joined)} cx={143} cy={64} r={19} fill={joined?O:'transparent'} stroke={O} strokeWidth={4} strokeDasharray={joined?undefined:'7 7'}/>{joined&&<L x={132} y={72} color="white">わ</L>}<L x={306} y={143} size={54}>朝ラン</L><L x={307} y={181} size={23}>明日 7:00 · 川沿い</L><L x={308} y={280} size={21}>{joined?'りん・ゆうき・あなた':'りん・ゆうき'}</L><L x={308} y={316} color="#999" size={20}>{joined?'指先にとまりました':'指先の ○ にとまる'}</L></>:kind===1?<><Rect width={660} height={400} rx={48} fill={K}/><Rect y={11} width={660} height={389} rx={48} fill={B}/><Path d="M29 336 L105 294 M225 272 V219 M277 272 V219" stroke="#8998FF" strokeWidth={48} strokeLinecap="round"/><Path d="M114 277 V87 Q114 64 138 64 Q162 64 162 87 V277 M169 277 V72 Q169 49 193 49 Q217 49 217 72 V277" fill="white"/>{joined&&<Path d="M224 277 V99 Q224 76 248 76 Q272 76 272 99 V277" fill="white"/>}<Path d="M63 400 V316 Q63 248 130 248 H251 Q319 248 319 316 V400" fill="white"/><Path d="M111 338 H257" stroke="#9BA8FF" strokeWidth={6} strokeLinecap="round"/>{[[138,88,'あ',B],[193,73,'り','#DDE2FF'],...(joined?[[248,99,'わ',P]]:[])].map(([x,y,t,c])=><G key={String(t)}><Circle cx={x} cy={y} r={18} fill={String(c)}/><L x={Number(x)-10} y={Number(y)+7} color={t==='り'?K:'white'}>{t}</L></G>)}<Rect onPress={()=>join(!joined)} x={65} y={45} width={260} height={350} fill="transparent"/><L x={357} y={141} size={46} color="white">ボウリング</L><L x={357} y={179} size={22} color="white">今日 18:30 · 駅前</L><L x={357} y={279} size={20} color="white">{joined?'3本目の指が立った':'5人まで＝片手'}</L><L x={357} y={313} size={18} color="#D8DEFF">立っている指＝集まった人</L></>:<><Rect width={660} height={440} rx={42} fill="#E9EAED"/><Path d="M0 127 C170 114 265 194 660 168" fill="none" stroke="#D0DFFF" strokeWidth={34}/><Path d="M220 0 V440 M459 -10 L385 450 M-15 49 L675 371 M0 293 H660" stroke="white" strokeWidth={18}/>{[[129,198,O,'あ'],[324,159,K,'り'],[368,348,B,'ゆ'],[551,91,P,'け']].map(([x,y,c,t])=><Pin key={t} x={x} y={y} c={c} t={t} joined={joined&&selected===t} onPress={()=>{select(String(t));join(false)}}/>)}{selected&&<G><Path d="M333 174 L386 126" stroke="white" strokeWidth={6}/><Rect x={360} y={36} width={272} height={128} rx={30} fill="white"/><L x={385} y={83} size={25}>{selected==='り'?'ボドゲ会':selected==='あ'?'朝ラン':selected==='ゆ'?'ボウリング':'おしゃべり'}</L><L x={385} y={116} size={18} color="#666">今から · 徒歩4分</L><G onPress={()=>join(!joined)}><Rect x={376} y={121} width={228} height={39} fill="transparent"/><L x={385} y={146} size={20} color={O}>{joined?'とまりました ✓':'とまる →'}</L></G></G>}</>}{kind!==2&&<G><Rect x={510} y={334} width={122} height={44} rx={22} fill={K}/><L x={528} y={364} size={22} color="white">あと24分</L></G>}</Svg></View></View><Text style={{fontSize:12,color:'#777',marginTop:12}}>{['指先の ○ をタップして参加','手をタップすると3本目の指が立ちます','指ピンをタップ → とまる。参加すると桃色の輪'][kind]}</Text><Pressable onPress={()=>{join(false);select('')}} style={{alignSelf:'flex-end',padding:10}}><Text style={{fontSize:12,color:'#666'}}>リセット</Text></Pressable></View>}
+export function PreviewF3(){return <ScrollView style={{flex:1,backgroundColor:'white'}} contentContainerStyle={{padding:20,paddingBottom:50,maxWidth:700,width:'100%',alignSelf:'center'}}><Text style={{fontSize:12,color:'#999',letterSpacing:2,marginBottom:25}}>この指とまれ — DESIGN IDEAS</Text>{[0,1,2].map(kind=><Card key={kind} kind={kind}/>)}</ScrollView>}
