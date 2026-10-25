@@ -6,3 +6,8 @@
   X-Content-Type-Options: nosniff
   X-Frame-Options: DENY
   Referrer-Policy: strict-origin-when-cross-origin
+
+# #134 フォントは URL に版（?v=）を付けているので、長くキャッシュしてよい。
+# 作り直したら public/index.html の ?v= を上げる（上げないと古いファイルが使われる）
+/fonts/*.woff2
+  Cache-Control: public, max-age=31536000, immutable

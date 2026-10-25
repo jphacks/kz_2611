@@ -2,6 +2,7 @@ node_modules/
 dist/
 .expo/
 .wrangler/
+.cache/
 *.log
 .DS_Store
 .env*
