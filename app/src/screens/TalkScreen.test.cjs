@@ -80,3 +80,24 @@ test('もっと見るで次のページを足し、その後の定期取得で�
   assert.equal(buttons(h.tree, 'もっと見る').length, 0);
   assert.deepEqual(server.calls.map(c => c.path), []);
 });
+
+test('全件の再取得で削除済みの行とカーソルを消し、空表示から新着の続きも取得できる', async () => {
+  const { server, timers, h } = setup();
+  server.take('GET', '/talks?limit=50').resolve({ talks: [talk(3), talk(2)], next: 'cursor' });
+  await flush();
+  press(h.tree, 'もっと見る');
+  server.take('GET', '/talks?limit=50&before=cursor').resolve({ talks: [talk(1)], next: 'older' });
+  await flush();
+  timers.shift()();
+  await flush();
+  server.take('GET', '/talks?limit=50').resolve({ talks: [], next: null });
+  await flush();
+  assert.match(text(h.tree), /まだトークがありません/);
+  assert.doesNotMatch(text(h.tree), /イベント[123]/);
+  assert.equal(buttons(h.tree, 'もっと見る').length, 0);
+  timers.shift()();
+  await flush();
+  server.take('GET', '/talks?limit=50').resolve({ talks: [talk(4)], next: 'new' });
+  await flush();
+  assert.equal(buttons(h.tree, 'もっと見る').length, 1);
+});
