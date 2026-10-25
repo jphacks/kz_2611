@@ -13,7 +13,7 @@
 | GET | /health | — | { db: "ok" } |
 
 ## プロフィール（担当: functions/lib/profile.ts）
-| PATCH | /me | name?, avatar?（data URL, 200KB以内, null で削除） | { user: Me } |
+| PATCH | /me | name?, avatar?（PNG / JPEG / WebP の base64 data URL、復号後 200KB 以内、null で削除。SVG・画像でない値・MIME と実体の不一致は 400） | { user: Me } |
 | GET | /users/:id | — | { user: User, is_friend, request } 友達・本人・同じイベントの参加者どうし（主催者含む）だけ。それ以外は 404（申請中でも見えない）。request は友達申請の状態 `none`（なし・友達・本人）/ `sent`（自分が申請中）/ `received`（相手から届いている） |
 
 ## 友達（担当: functions/lib/friends.ts）
