@@ -3,6 +3,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { Main } from './src/Main';
 import { PreviewX3 } from './src/preview/x3/PreviewX3';
+import { PreviewG2 } from './src/preview/g2/PreviewG2';
 import { PreviewX6 } from './src/preview/x6/PreviewX6';
 
 if (Platform.OS === 'web' && typeof document !== 'undefined' && !document.getElementById('fonts')) {
@@ -19,6 +20,7 @@ if (Platform.OS === 'web' && typeof document !== 'undefined' && !document.getEle
 export default function App() {
   const preview = Platform.OS === 'web' ? new URLSearchParams(window.location.search).get('preview') : null;
   if (preview === 'x3') return <SafeAreaProvider><StatusBar style="dark" /><PreviewX3 /></SafeAreaProvider>;
+  if (preview === 'g2') return <SafeAreaProvider><StatusBar style="dark" /><PreviewG2 /></SafeAreaProvider>;
   if (preview === 'x6') return <SafeAreaProvider><StatusBar style="dark" /><PreviewX6 /></SafeAreaProvider>;
   return (
     <SafeAreaProvider>
