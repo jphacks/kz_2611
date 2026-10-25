@@ -8,8 +8,8 @@ self.addEventListener('push', event => {
   const id = Number(data.event_id);
   event.waitUntil(self.registration.showNotification(typeof data.title === 'string' ? data.title : 'このゆびとまれ', {
     body: typeof data.body === 'string' ? data.body : '',
-    icon: '/icon-192.png',
-    badge: '/icon-192.png',
+    icon: '/icons/icon-192.png',
+    badge: '/icons/icon-192.png',
     tag: typeof data.tag === 'string' ? data.tag : undefined,
     data: { event_id: Number.isInteger(id) && id > 0 ? id : null },
   }));

@@ -51,7 +51,7 @@
 | GET | /talks | — | { talks: Talk[] }（自分が主催・参加したイベント。終了したものも。最新メッセージが新しい順） |
 
 ## 通知・Web Push（担当: functions/lib/notify.ts、暗号化は functions/lib/push.ts）（#87）
-鍵は Pages の secret `VAPID_PUBLIC_KEY`（base64url の非圧縮公開鍵）・`VAPID_PRIVATE_KEY`（base64url の d）・任意で `VAPID_SUBJECT`（mailto: か https:）。手元は `app/.dev.vars`（git に入れない）。
+鍵は Pages の secret `VAPID_PUBLIC_KEY`（base64url の非圧縮公開鍵）・`VAPID_PRIVATE_KEY`（base64url の d）・任意で `VAPID_SUBJECT`（mailto: か https:）。本番には設定済みなので、デプロイのたびに設定し直す必要はない。手元で実際に送るときだけ `app/.dev.vars`（git に入れない）に置く。
 | GET | /push/key | — | { key: string \| null }（applicationServerKey。未設定なら null） |
 | POST | /push/subscribe | PushSubscription.toJSON() の endpoint, keys.p256dh, keys.auth | { ok }（endpoint は https・既定ポート・認証情報なしで、FCM / Mozilla / Apple / Windows のプッシュサービスだけ。鍵は P-256 の65バイトと16バイト。それ以外→400。同じ端末の再登録は冪等。別アカウントの届け先→409（画面は購読し直す）。1人10台まで、古いものから消す） |
 | DELETE | /push/subscribe | endpoint | { ok }（自分のその届け先だけ消す。オフ・ログアウト時に画面から呼ぶ。無くても200） |
