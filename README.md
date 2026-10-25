@@ -1,11 +1,13 @@
-# このゆびとまれ
+<h1 align="center">このゆびとまれ</h1>
 
-## 🏆 受賞
+<h3 align="center">ファーストペンギンを一人にしない</h3>
 
-[![JPHACKS 2026 Sponsor Award ディップ株式会社](https://img.shields.io/badge/JPHACKS%202026-Sponsor%20Award%EF%BC%88%E3%83%87%E3%82%A3%E3%83%83%E3%83%97%E6%A0%AA%E5%BC%8F%E4%BC%9A%E7%A4%BE%EF%BC%89-orange?style=for-the-badge&logo=trophy)](https://github.com/jphacks/kz_2611)
+<p align="center">
+  <img src="https://img.shields.io/badge/JPHACKS%202026%20%E9%87%91%E6%B2%A2-Hack%20Day%20Block%20Sponsor%20Award%EF%BC%88%E3%83%87%E3%82%A3%E3%83%83%E3%83%97%E6%A0%AA%E5%BC%8F%E4%BC%9A%E7%A4%BE%EF%BC%89-orange?style=for-the-badge&logo=trophy" alt="JPHACKS 2026 金沢会場 Hack Day Block Sponsor Award（ディップ株式会社）">
+</p>
 
-**金沢会場 Hack Day Sponsor Award** - ディップ株式会社
-
+<p align="center">🏆 <strong>金沢会場 Hack Day Block Sponsor Award（ディップ株式会社）受賞</strong><br>
+「夢とアイデアと情熱で、誰かの明日を良くしたチーム」に贈られる賞です</p>
 
 <p align="center">
   <img src="https://img.shields.io/badge/TypeScript-3178C6?style=flat&logo=typescript&logoColor=white" alt="TypeScript">
@@ -15,13 +17,13 @@
   <img src="https://img.shields.io/badge/Cloudflare_D1-F38020?style=flat&logo=cloudflare&logoColor=white" alt="Cloudflare D1">
 </p>
 
-フッ軽遊びをもっと気軽に。LINE で誘いづらい「ちょっと遊びたい」を、募集・応募の形式で解決する Web アプリです。
+<p align="center">フッ軽遊びをもっと気軽に。LINE で誘いづらい「ちょっと遊びたい」を、募集・応募の形式で解決する Web アプリです。</p>
 
-**▶ アプリを使ってみる: https://kz2611.pages.dev**
+<p align="center">
+  <strong>▶ <a href="https://kz2611.pages.dev">アプリを使ってみる</a></strong>　｜　<strong>▶ <a href="https://youtube.com/shorts/kQaDI3yDf1Q">デモ動画（YouTube）</a></strong>
+</p>
 
-**▶ デモ動画（YouTube）: https://youtube.com/shorts/kQaDI3yDf1Q**
-
-<table>
+<table align="center">
   <tr>
     <td align="center"><img src="docs/images/screen-create.png" alt="誘う（募集を作る）画面" width="240"></td>
     <td align="center"><img src="docs/images/demo-join.gif" alt="指をスライドして参加すると「とまった!!」の演出が流れる様子" width="240"></td>
@@ -41,35 +43,74 @@
 私たちは、こうした小さな負担をなくして、思いたったときに簡単に友達を誘えるようにしたいと考えました。
 
 ### 製品説明
+<table>
+  <tr>
+    <td width="62%">
+
 掲示板に遊びの募集を投稿し、参加したい人が指をスライドして参加できる形式のアプリです。募集には時間制限を設け、カードの外枠で残り時間を表示。参加者はアイコンで誰が参加しているかが分かり、イベント内のチャットで会話もできます。グループを作って友達同士で募集をかけたり、QR・招待リンクで友達を追加することもできます。
 
-<img src="docs/images/product-invite.png" alt="ゆいの招待リンクと友達追加用QRコード" width="240">
+    </td>
+    <td align="center"><img src="docs/images/product-invite.png" alt="ゆいの招待リンクと友達追加用QRコード" width="220"></td>
+  </tr>
+</table>
 
 ### 特長
+<table>
+  <tr>
+    <td width="50%" valign="top">
+
 #### 1. スライドで気軽に参加
 左にある自分の指（オレンジ）を右へスライドし、主催者の指先に触れるだけで参加できます。取り消しは左へスライドします。
 
-#### 2. 残り時間がひと目で分かる
-カードの外枠が残り時間のインジケーターになり、通常は黒、残り10分以下は黄色で表示されます。
-
-<img src="docs/images/feature-gauge.png" alt="あと5分の黄色い外枠と、残り時間が長いカラオケ募集の外枠を比較" width="240">
-
-#### 3. メンツが見える
-参加者のアイコンが並び、主催者アイコン周りのインジケーターで集まった人数が分かります。タップで参加者詳細も確認できます。
-
-<img src="docs/images/feature-members.png" alt="タップで開く参加者詳細：主催のはると、そうた、ゆい" width="240">
+    </td>
+    <td width="50%" valign="top">
 
 #### 4. はじめてでも操作を試せる
 初回オンボーディングで、募集から指をスライドしての参加、チャットまでをデモで体験できます。
 
+    </td>
+  </tr>
+  <tr>
+    <td width="50%" valign="top">
+
+#### 2. 残り時間がひと目で分かる
+カードの外枠が残り時間のインジケーターになり、通常は黒、残り10分以下は黄色で表示されます。
+
+<p align="center"><img src="docs/images/feature-gauge.png" alt="あと5分の黄色い外枠と、残り時間が長いカラオケ募集の外枠を比較" width="220"></p>
+
+    </td>
+    <td width="50%" valign="top">
+
+#### 3. メンツが見える
+参加者のアイコンが並び、主催者アイコン周りのインジケーターで集まった人数が分かります。タップで参加者詳細も確認できます。
+
+<p align="center"><img src="docs/images/feature-members.png" alt="タップで開く参加者詳細：主催のはると、そうた、ゆい" width="220"></p>
+
+    </td>
+  </tr>
+  <tr>
+    <td width="50%" valign="top">
+
 #### 5. 参加した瞬間が楽しい
 参加が成立すると、鳥や紙吹雪と「とまった!!」の演出が流れます。効果音と振動はそれぞれオン・オフを選べ、端末の「視差効果を減らす」設定に合わせて揺れやフラッシュなどを抑えます（振動は対応端末のみです）。
+
+    </td>
+    <td width="50%" valign="top">
 
 #### 6. 通知で募集や参加を見逃しにくい
 通知をオンにすると、新しい募集、主催した募集への参加、人数がそろったことを Web Push で受け取れます。iPhone ではホーム画面に追加（PWA）すると通知を受け取れます。
 
+    </td>
+  </tr>
+  <tr>
+    <td colspan="2" valign="top">
+
 #### 7. 友達とつながりやすい
 QR・招待リンクで友達を追加でき、ID での追加は申請・承認制です。参加者一覧からもプロフィールを開いて友達申請できます。
+
+    </td>
+  </tr>
+</table>
 
 ### 解決できること
 誘う側と参加する側の負担を解消します。
