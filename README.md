@@ -1,6 +1,6 @@
 # このゆびとまれ
 
-<p align="center"><img src="app/public/icons/icon-512.png" alt="このゆびとまれ のアプリアイコン" width="120"></p>
+
 <p align="center">
   <img src="https://img.shields.io/badge/TypeScript-3178C6?style=flat&logo=typescript&logoColor=white" alt="TypeScript">
   <img src="https://img.shields.io/badge/Expo-000020?style=flat&logo=expo&logoColor=white" alt="Expo">
