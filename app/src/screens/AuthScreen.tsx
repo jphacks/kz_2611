@@ -5,7 +5,7 @@ import { api, setToken, Me } from '../api';
 import { C, S, T } from '../ui/theme';
 import { errMsg } from '../lib/util';
 
-export function AuthScreen({ onDone }: { onDone: (me: Me) => void }) {
+export function AuthScreen({ onDone, onShowOnboarding }: { onDone: (me: Me) => void; onShowOnboarding: () => void }) {
   const [mode, setMode] = useState<'login' | 'register'>('register');
   const [handle, setHandle] = useState(''); const [name, setName] = useState(''); const [password, setPassword] = useState('');
   const [err, setErr] = useState(''); const [busy, setBusy] = useState(false);
@@ -27,6 +27,9 @@ export function AuthScreen({ onDone }: { onDone: (me: Me) => void }) {
       <Pressable style={[S.btn, busy && { opacity: 0.5 }]} disabled={busy} onPress={submit}><Text style={S.btnText}>{mode === 'login' ? 'ログイン' : '登録する'}</Text></Pressable>
       <Pressable onPress={() => setMode(mode === 'login' ? 'register' : 'login')}>
         <Text style={[T.sub, { textAlign: 'center', color: C.ink, textDecorationLine: 'underline' }]}>{mode === 'login' ? 'はじめての人は登録' : 'アカウントがある人はログイン'}</Text>
+      </Pressable>
+      <Pressable accessibilityRole="button" onPress={onShowOnboarding} style={S.btnGhost}>
+        <Text style={S.btnGhostText}>使い方を見る</Text>
       </Pressable>
     </View>
   );

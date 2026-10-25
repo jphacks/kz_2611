@@ -6,6 +6,9 @@ import Svg, { Path, Circle } from 'react-native-svg';
 import { api, loadToken, setToken, Me } from './api';
 import { C, FONT } from './ui/theme';
 import { AuthScreen } from './screens/AuthScreen';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { OnboardingScreen } from './screens/OnboardingScreen';
+import { ONBOARDED_KEY, shouldShowOnboarding } from './components/onboarding/state';
 import { BoardScreen } from './screens/BoardScreen';
 import { CreateScreen } from './screens/CreateScreen';
 import { TalkScreen } from './screens/TalkScreen';
@@ -38,17 +41,22 @@ const LABEL: Record<Tab, string> = { board: '掲示板', talk: 'トーク', crea
 export function Main() {
   const [me, setMe] = useState<Me | null>(null);
   const [ready, setReady] = useState(false);
+  const [onboarding, setOnboarding] = useState(false);
   const [tab, setTab] = useState<Tab>('board');
   const [nav, setNav] = useState<{ openEventId?: number; editEventId?: number }>({});
   useEffect(() => { (async () => {
-    if (await loadToken()) { try { setMe((await api<{ user: Me }>('/me')).user); } catch { await setToken(null); } }
+    let loggedIn = false;
+    if (await loadToken()) { try { setMe((await api<{ user: Me }>('/me')).user); loggedIn = true; } catch { await setToken(null); } }
+    try {
+      setOnboarding(shouldShowOnboarding(loggedIn, await AsyncStorage.getItem(ONBOARDED_KEY)));
+    } catch { /* 保存領域が使えない端末では認証を妨げない。案内は手動で開ける。 */ }
     setReady(true);
   })(); }, []);
   // #87 通知から開いた募集（/?event=<id>）を掲示板で開く。ログイン前なら、ログイン後に開く
   const [link, setLink] = useState(takeEventLink);
   useEffect(() => { if (me && link !== undefined) { setNav({ openEventId: link }); setTab('board'); setLink(undefined); } }, [me, link]);
   if (!ready) return <View style={{ flex: 1, backgroundColor: C.bg }} />;
-  if (!me) return <View style={{ flex: 1, backgroundColor: '#E9E9E9', alignItems: 'center' }}><SafeAreaView style={{ flex: 1, width: '100%', maxWidth: 480, backgroundColor: C.bg }}><AuthScreen onDone={setMe} /></SafeAreaView></View>;
+  if (!me) return <View style={{ flex: 1, backgroundColor: '#E9E9E9', alignItems: 'center' }}><SafeAreaView style={{ flex: 1, width: '100%', maxWidth: 480, backgroundColor: C.bg }}>{onboarding ? <OnboardingScreen onDone={async () => { await AsyncStorage.setItem(ONBOARDED_KEY, '1'); setOnboarding(false); }} /> : <AuthScreen onDone={setMe} onShowOnboarding={() => setOnboarding(true)} />}</SafeAreaView></View>;
   const props: ScreenProps = {
     me, setMe, ...nav,
     go: (t, o) => { setNav(o || {}); setTab(t); },
