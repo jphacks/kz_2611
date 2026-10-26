@@ -9,7 +9,7 @@ import { C, S, T, tint } from '../ui/theme';
 import { ParticipantsSheet } from './ParticipantsSheet';
 import { JoinCelebration } from './celebration/JoinCelebration';
 import { preloadBirdImages } from './celebration/birds';
-import { prepareCelebrationSound } from './celebration/feedback';
+import { prepareCelebrationSound, startJoinHaptic } from './celebration/feedback';
 import { useCelebrateSettings } from './celebration/settings';
 import { canJoin, mergeMessages } from './chat/messages';
 
@@ -41,12 +41,13 @@ function ChatSession({ eventId, me, onClose, onChanged, onEdit }: Omit<ChatSheet
   const cursor = useRef(0);
   const scroll = useRef<React.ComponentRef<typeof ScrollView>>(null);
   const nearBottom = useRef(true);
+  const stopHaptic = useRef<() => void>(() => {});
   const member = !!event && (event.joined || event.is_host);
   useEffect(() => {
     alive.current = true;
     // トーク画面から開いたときも、参加の演出の鳥を先に読み込んでおく（#98）
     preloadBirdImages();
-    return () => { alive.current = false; };
+    return () => { alive.current = false; stopHaptic.current(); };
   }, []);
   async function loadEvent() {
     setLoading(true);
@@ -72,7 +73,11 @@ function ChatSession({ eventId, me, onClose, onChanged, onEdit }: Omit<ChatSheet
     if (kind === 'send' && (!text || text.length > 500)) return;
     lock.current = true; setBusy(true); setError('');
     // Safari でも鳴らせるように、ボタンを押した操作の中で音の準備だけしておく（掲示板のスワイプと同じ）
-    if (kind === 'join') prepareCelebrationSound(celebrate.sound);
+    // 振動も掲示板と同じく、API の応答を待たずこの同期処理で開始する（#160）
+    if (kind === 'join') {
+      stopHaptic.current = startJoinHaptic(celebrate.ready && celebrate.vibrate);
+      prepareCelebrationSound(celebrate.sound);
+    }
     try {
       if (kind === 'send') {
         const data = await api<{ message: Message }>(`/events/${eventId}/messages`, { body: { body: text } });
@@ -91,7 +96,11 @@ function ChatSession({ eventId, me, onClose, onChanged, onEdit }: Omit<ChatSheet
         // 参加が成功したときだけ、掲示板のスワイプと同じ演出を流す（#151）
         if (kind === 'join' && data.event.joined) setCelebration(true);
       }
-    } catch (e) { if (alive.current) setError(errMsg(e)); }
+    } catch (e) {
+      // 失敗した参加操作で開始した振動だけを止める
+      if (kind === 'join') stopHaptic.current();
+      if (alive.current) setError(errMsg(e));
+    }
     finally { lock.current = false; if (alive.current) setBusy(false); }
   }
   return <>
