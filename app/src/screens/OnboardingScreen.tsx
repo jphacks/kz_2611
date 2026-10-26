@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState, type ComponentRef } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { C, FONT, PILL, S, T } from '../ui/theme';
 import { JoinCelebration } from '../components/celebration/JoinCelebration';
 import { prepareCelebrationSound } from '../components/celebration/feedback';
@@ -64,7 +64,7 @@ export function OnboardingScreen({ onDone }: { onDone: () => Promise<void> }) {
     <View style={s.body} accessibilityElementsHidden={!!celebration} importantForAccessibility={celebration ? 'no-hide-descendants' : 'auto'}>
       <View style={s.header}><Text style={T.date}>このゆびとまれ / GUIDE</Text><Pressable accessibilityRole="button" disabled={busy} onPress={finish} style={s.skip}><Text style={T.body}>スキップ</Text></Pressable></View>
       {width > 0 && <ScrollView ref={scroll} horizontal pagingEnabled showsHorizontalScrollIndicator={false} style={{ flex: 1 }} onScrollBeginDrag={interact} onScroll={event => setPage(Math.max(0, Math.min(PAGES.length - 1, Math.round(event.nativeEvent.contentOffset.x / width))))} scrollEventThrottle={100}>
-        {PAGES.map(({ title, sub, Demo }, index) => <ScrollView key={title} style={{ width }} contentContainerStyle={s.page} showsVerticalScrollIndicator={false} accessibilityElementsHidden={page !== index} importantForAccessibility={page === index ? 'auto' : 'no-hide-descendants'}>
+        {PAGES.map(({ title, sub, Demo }, index) => <ScrollView key={title} {...(Platform.OS === 'web' ? { inert: page !== index || undefined } : {})} style={{ width }} contentContainerStyle={s.page} showsVerticalScrollIndicator={false} accessibilityElementsHidden={page !== index} importantForAccessibility={page === index ? 'auto' : 'no-hide-descendants'}>
           <Text style={s.number}>{`0${index + 1} / 05`}</Text><Text accessibilityRole="header" style={s.title}>{title}</Text><Text style={[T.body, { marginTop: 12 }]}>{sub}</Text>
           <View style={s.demo}><Demo active={page === index} reduced={reduced} paused={celebration === 'slide'} onTouch={() => setCelebration('slide')} /></View>
         </ScrollView>)}
