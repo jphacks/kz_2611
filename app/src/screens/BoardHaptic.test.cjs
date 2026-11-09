@@ -18,6 +18,8 @@ function board(settings = { sound: false, vibrate: true, ready: true }) {
     '../components/celebration/birds': { preloadBirdImages() {} },
     '../components/celebration/feedback': { prepareCelebrationSound() {}, startJoinHaptic: on => { if (on) calls.push('start'); return () => { if (on) calls.push('stop'); }; } },
     '../components/celebration/settings': { useCelebrateSettings: () => settings },
+    '../components/leave/LeaveHorror': { LeaveHorror: 'LeaveHorror' },
+    '../components/leave/leaveSound': { prepareLeaveSound: on => { if (on) calls.push('leave-sound'); } },
     '../components/ParticipantsSheet': { ParticipantsSheet: 'ParticipantsSheet' },
     '../lib/util': { errMsg: e => e.message, usePolling: fn => { refresh = fn; } },
     '../ui/Chip': { Chip: 'Chip' }, '../ui/Header': { Header: 'Header' },
@@ -55,3 +57,24 @@ for (const settings of [{ sound: false, vibrate: false, ready: true }, { sound: 
     h.unmount();
   });
 }
+
+test('参加をやめたら API を待たずに暗転の演出を出し、失敗したら止める', async () => {
+  const { h, backend, event } = board({ sound: true, vibrate: false, ready: true });
+  await flush();
+  const joined = { ...event, joined: true };
+  const horror = () => findAll(h.tree, n => n.type === 'LeaveHorror')[0].props.visible;
+  assert.equal(horror(), false);
+  let pending = findAll(h.tree, n => n.type === 'EventCard')[0].props.onLeave(joined);
+  await flush();
+  assert.equal(horror(), true);
+  backend.take('DELETE', '/events/10/join').reject(Error('通信エラー'));
+  await pending;
+  await flush();
+  assert.equal(horror(), false);
+  pending = findAll(h.tree, n => n.type === 'EventCard')[0].props.onLeave(joined);
+  backend.take('DELETE', '/events/10/join').resolve({ event });
+  await pending;
+  await flush();
+  assert.equal(horror(), true);
+  h.unmount();
+});

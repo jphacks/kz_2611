@@ -1,0 +1,23 @@
+// 参加をやめたときの血文字のフォント。Zen Old Mincho Black（SIL Open Font License 1.1）から
+// 「なんでやめたの」の7文字だけを取り出した WOFF2。CSP で外部フォントを読めないので data: で持つ。
+// 作り方: pyftsubset ZenOldMincho-Black.ttf --text="なんでやめたの" --flavor=woff2 --layout-features='' --no-hinting --desubroutinize
+export const BLOOD_FONT_FAMILY = 'KzBloodMincho';
+const WOFF2 = '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';
+
+let loading: Promise<void> | null = null;
+
+/** Web で一度だけ読み込む。読めなくても演出は端末の明朝体で続ける */
+export function loadBloodFont(): Promise<void> {
+  if (loading) return loading;
+  loading = (async () => {
+    if (typeof document === 'undefined' || typeof FontFace === 'undefined') return;
+    try {
+      const face = new FontFace(BLOOD_FONT_FAMILY, `url(data:font/woff2;base64,${WOFF2})`, { weight: '900' });
+      await face.load();
+      document.fonts.add(face);
+    } catch {
+      // 読めなければフォールバックの明朝体で描く
+    }
+  })();
+  return loading;
+}

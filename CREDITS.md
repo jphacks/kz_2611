@@ -6,6 +6,7 @@
 | 鳥のアプリアイコン | `app/public/icons/*` | チームメンバーの手描き |
 | 参加演出の鳥の画像 | `app/src/components/celebration/bird_*.png` | チームメンバーの手描き |
 | 参加演出の効果音 | `app/src/components/celebration/feedback.ts` | Web Audio API でコードから合成（音声ファイルは使っていません） |
+| 参加をやめたときの演出（目・血文字・音） | `app/src/components/leave/*` | Canvas と Web Audio API でコードから描画・合成（画像・音声ファイルは使っていません。ささやき声はブラウザの読み上げ機能） |
 | README・ドキュメントの画面画像、デモ動画 | `docs/images/*` | 開発中のアプリを撮影（写っているユーザーは撮影用に作った架空のものです） |
 
 ## 外部の素材
@@ -13,6 +14,7 @@
 |---|---|---|
 | [Inter](https://fonts.google.com/specimen/Inter) | Google Fonts から読み込み | SIL Open Font License 1.1 |
 | [Noto Sans JP](https://fonts.google.com/noto/specimen/Noto+Sans+JP) | Google Fonts から読み込み | SIL Open Font License 1.1 |
+| [Zen Old Mincho](https://fonts.google.com/specimen/Zen+Old+Mincho)（Black） | 参加をやめたときの血文字。「なんでやめたの」の7文字だけを取り出して `app/src/components/leave/bloodFont.ts` に同梱 | SIL Open Font License 1.1 |
 | `app/assets/*`（Android 用アイコン等） | Expo のテンプレートに含まれる初期画像 | Expo のテンプレート（MIT License） |
 
 利用しているライブラリとそのライセンスは `app/package.json` と `app/package-lock.json` を参照してください。
