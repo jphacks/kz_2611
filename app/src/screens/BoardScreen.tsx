@@ -10,6 +10,8 @@ import { JoinCelebration } from '../components/celebration/JoinCelebration';
 import { preloadBirdImages } from '../components/celebration/birds';
 import { prepareCelebrationSound, startJoinHaptic } from '../components/celebration/feedback';
 import { useCelebrateSettings } from '../components/celebration/settings';
+import { LeaveHorror } from '../components/leave/LeaveHorror';
+import { prepareLeaveSound } from '../components/leave/leaveSound';
 import { ParticipantsSheet } from '../components/ParticipantsSheet';
 import { errMsg, usePolling } from '../lib/util';
 import type { ScreenProps } from '../Main';
@@ -32,6 +34,7 @@ export function BoardScreen(p: ScreenProps) {
   const [leaving, setLeaving] = useState<number | null>(null);
   const [deleting, setDeleting] = useState<number | null>(null);
   const [celebration, setCelebration] = useState(false);
+  const [horror, setHorror] = useState(false);
   const celebrate = useCelebrateSettings();
   const joiningRef = useRef(false);
   const deletingRef = useRef(false);
@@ -98,6 +101,9 @@ export function BoardScreen(p: ScreenProps) {
   const leave = useCallback(async (event: EventItem) => {
     if (joiningRef.current || event.is_host || !event.joined) return;
     joiningRef.current = true; setLeaving(event.id); setActionError('');
+    // 指を離した操作の中で音を用意し、すぐに暗転させる（失敗したら演出を止める）
+    prepareLeaveSound(celebrate.ready && celebrate.sound);
+    setHorror(true);
     try {
       const result = await api<{ event: EventItem }>(`/events/${event.id}/join`, { method: 'DELETE' });
       if (active.current) {
@@ -106,9 +112,9 @@ export function BoardScreen(p: ScreenProps) {
       }
       void refresh().catch(() => {});
     } catch (e) {
-      if (active.current) setActionError(errMsg(e));
+      if (active.current) { setHorror(false); setActionError(errMsg(e)); }
     } finally { joiningRef.current = false; if (active.current) setLeaving(null); }
-  }, []);
+  }, [celebrate.sound, celebrate.ready]);
   const remove = useCallback(async (event: EventItem) => {
     if (deletingRef.current || !event.is_host) return;
     deletingRef.current = true; setDeleting(event.id); setActionError('');
@@ -163,6 +169,12 @@ export function BoardScreen(p: ScreenProps) {
         onDone={() => setCelebration(false)}
         sound={celebrate.sound}
         vibrate={celebrate.vibrate}
+      />
+      <LeaveHorror
+        visible={horror}
+        onDone={() => setHorror(false)}
+        sound={celebrate.ready && celebrate.sound}
+        vibrate={celebrate.ready && celebrate.vibrate}
       />
     </View>
   );
